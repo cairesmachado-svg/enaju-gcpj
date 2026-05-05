@@ -84,6 +84,10 @@ collect_crossref_corpus <- function(corpus_id, query_str,
 
   df <- dplyr::bind_rows(all_items)
 
+  # Garantir o cap exato: cr_works pode retornar mais que max_results
+  # quando rows_per_call > max_results (uma página inteira é trazida).
+  if (nrow(df) > max_results) df <- df[seq_len(max_results), ]
+
   # Helpers: extrair primeira string de uma célula que pode ser lista/vetor/NA.
   pick_first <- function(x) {
     if (is.null(x)) return(NA_character_)
