@@ -108,6 +108,32 @@ O pipeline gera automaticamente um log de execução em `logs/pipeline_log.md` c
 
 ---
 
+## Execução pelo GitHub Actions
+
+O repositório inclui o workflow `.github/workflows/collect.yml`, que permite rodar
+a fase de coleta diretamente da interface do GitHub:
+
+1. Configure os *Repository secrets* (Settings → Secrets and variables → Actions):
+   - `SCOPUS_API_KEY` (obrigatório para `01_collect_scopus.R`; opcional se Scopus já foi coletado)
+   - `SCOPUS_INST_TOKEN` (opcional)
+   - `SEMANTIC_SCHOLAR_API_KEY` (opcional, mas evita HTTP 429)
+   - `CROSSREF_EMAIL`, `OPENALEX_EMAIL`, `SCIELO_EMAIL` (recomendados — polite pool)
+2. Vá em **Actions → Collect bibliometric data → Run workflow**.
+3. Selecione quais coletas executar (`openalex,crossref,semantic_scholar,scielo` por padrão)
+   e os caps por corpus.
+4. Os dados brutos coletados ficam disponíveis como artifact `enaju-raw-data` no
+   próprio run (retenção de 14 dias).
+
+### Variáveis de ambiente reconhecidas
+
+| Variável | Função | Default |
+|---|---|---|
+| `ENAJU_PHASE` | `collection` instala apenas pacotes da fase de coleta; `analysis` instala tudo. | `all` |
+| `ENAJU_OPENALEX_MAX` | Máx. registros por corpus em `02_collect_openalex.R` | `5000` |
+| `ENAJU_CROSSREF_MAX` | Máx. registros por corpus em `04_collect_crossref.R` | `2000` |
+
+---
+
 ## Licença
 
 Código sob licença MIT. Dados coletados das bases respeitam os termos de uso de cada provedor.

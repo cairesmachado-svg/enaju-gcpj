@@ -13,6 +13,14 @@ library(rcrossref)
 library(dplyr)
 library(progress)
 
+# Operador null-coalesce — definido antes das funções que o utilizam.
+`%||%` <- function(a, b) {
+  if (is.null(a)) return(b)
+  if (length(a) == 0) return(b)
+  if (is.atomic(a) && all(is.na(a))) return(b)
+  a
+}
+
 # Configurar polite pool com email
 cr_email <- Sys.getenv("CROSSREF_EMAIL")
 if (nchar(cr_email) > 0) {
@@ -27,7 +35,9 @@ QUERIES <- readRDS(here::here("data", "processed", "queries.rds"))
 # -----------------------------------------------------------------------------
 
 collect_crossref_corpus <- function(corpus_id, query_str,
-                                     max_results = 3000, rows_per_call = 1000) {
+                                     max_results = as.integer(
+                                       Sys.getenv("ENAJU_CROSSREF_MAX", unset = "2000")),
+                                     rows_per_call = 1000) {
 
   cat("\n--- Coletando Corpus", corpus_id, "via Crossref ---\n")
 
@@ -39,49 +49,33 @@ collect_crossref_corpus <- function(corpus_id, query_str,
     return(readRDS(out_rds))
   }
 
-  # Coleta em lotes com cursor
-  all_items <- list()
-  offset    <- 0
-  collected <- 0
+  # Crossref: usar cursor para paginação profunda (offset não funciona além de 1000).
+  # cr_works expõe cursor via argumento `cursor = "*"` e `cursor_max`.
+  resp <- tryCatch({
+    rcrossref::cr_works(
+      query     = query_str,
+      filter    = c(
+        type          = "journal-article",
+        from_pub_date = "1995-01-01"
+      ),
+      select    = c(
+        "DOI", "title", "author", "published-print", "published-online",
+        "container-title", "volume", "issue", "page",
+        "is-referenced-by-count", "subject",
+        "ISSN", "publisher", "type"
+      ),
+      cursor     = "*",
+      cursor_max = max_results,
+      limit      = rows_per_call,
+      .progress  = "text"
+    )
+  }, error = function(e) {
+    cat("[AVISO] Crossref erro:", conditionMessage(e), "\n")
+    NULL
+  })
 
-  repeat {
-    to_fetch  <- min(rows_per_call, max_results - collected)
-    if (to_fetch <= 0) break
-
-    resp <- tryCatch({
-      rcrossref::cr_works(
-        query   = query_str,
-        limit   = to_fetch,
-        offset  = offset,
-        filter  = c(
-          type    = "journal-article",
-          from_pub_date = "1995-01-01"
-        ),
-        select  = c(
-          "DOI", "title", "author", "published-print", "published-online",
-          "container-title", "volume", "issue", "page",
-          "is-referenced-by-count", "subject", "abstract",
-          "ISSN", "publisher", "type", "language"
-        ),
-        .progress = FALSE
-      )
-    }, error = function(e) {
-      cat("[AVISO] Crossref erro no offset", offset, ":", conditionMessage(e), "\n")
-      Sys.sleep(5)
-      NULL
-    })
-
-    if (is.null(resp) || is.null(resp$data) || nrow(resp$data) == 0) break
-
-    all_items[[length(all_items) + 1]] <- resp$data
-    collected <- collected + nrow(resp$data)
-    offset    <- offset + nrow(resp$data)
-
-    cat(sprintf("  Coletados: %d / %d\n", collected, max_results))
-
-    if (nrow(resp$data) < to_fetch) break
-    Sys.sleep(1)
-  }
+  all_items <- if (!is.null(resp) && !is.null(resp$data) && nrow(resp$data) > 0)
+    list(resp$data) else list()
 
   if (length(all_items) == 0) {
     cat("[AVISO] Nenhum resultado Crossref para corpus", corpus_id, "\n")
@@ -90,34 +84,63 @@ collect_crossref_corpus <- function(corpus_id, query_str,
 
   df <- dplyr::bind_rows(all_items)
 
-  # Normalizar colunas
-  df <- df %>%
-    dplyr::mutate(
-      source_db  = "Crossref",
-      corpus_id  = corpus_id,
-      query_date = Sys.Date(),
-      title      = purrr::map_chr(title, ~if (length(.x) > 0) .x[[1]] else NA_character_),
-      journal    = purrr::map_chr(`container-title`,
-                                  ~if (!is.null(.x) && length(.x) > 0) .x[[1]] else NA_character_),
-      year       = dplyr::coalesce(
-        as.integer(stringr::str_extract(`published.print`, "\\d{4}")),
-        as.integer(stringr::str_extract(`published.online`, "\\d{4}"))
-      ),
-      doi_clean  = DOI,
-      first_author = purrr::map_chr(author, function(a) {
-        if (is.data.frame(a) && nrow(a) > 0) {
-          paste(
-            a$family[1] %||% "",
-            a$given[1] %||% ""
-          ) %>% trimws()
-        } else NA_character_
-      }),
-      citations  = `is-referenced-by-count`
-    ) %>%
-    dplyr::select(
-      doi_clean, title, year, journal, first_author,
-      citations, subject, publisher, source_db, corpus_id, query_date
-    ) %>%
+  # Helpers: extrair primeira string de uma célula que pode ser lista/vetor/NA.
+  pick_first <- function(x) {
+    if (is.null(x)) return(NA_character_)
+    if (length(x) == 0) return(NA_character_)
+    if (is.list(x)) {
+      first <- x[[1]]
+      if (is.null(first) || length(first) == 0) return(NA_character_)
+      return(as.character(first[1]))
+    }
+    as.character(x[1])
+  }
+
+  col_or_na <- function(d, name) if (name %in% names(d)) d[[name]] else rep(NA, nrow(d))
+
+  pub_print  <- col_or_na(df, "published.print")
+  pub_online <- col_or_na(df, "published.online")
+  if (is.list(pub_print))  pub_print  <- vapply(pub_print,  pick_first, character(1))
+  if (is.list(pub_online)) pub_online <- vapply(pub_online, pick_first, character(1))
+
+  title_v   <- col_or_na(df, "title")
+  journal_v <- col_or_na(df, "container.title")
+  if (is.list(title_v))   title_v   <- vapply(title_v,   pick_first, character(1))
+  if (is.list(journal_v)) journal_v <- vapply(journal_v, pick_first, character(1))
+
+  citations_v <- col_or_na(df, "is.referenced.by.count")
+  subject_v   <- col_or_na(df, "subject")
+  if (is.list(subject_v)) subject_v <- vapply(subject_v, pick_first, character(1))
+  publisher_v <- col_or_na(df, "publisher")
+  doi_v       <- col_or_na(df, "doi")
+  if (all(is.na(doi_v)) && "DOI" %in% names(df)) doi_v <- df$DOI
+
+  authors_col <- if ("author" %in% names(df)) df$author else replicate(nrow(df), NULL, simplify = FALSE)
+  first_author_v <- purrr::map_chr(authors_col, function(a) {
+    if (is.data.frame(a) && nrow(a) > 0) {
+      fam <- if ("family" %in% names(a)) a$family[1] else ""
+      giv <- if ("given"  %in% names(a)) a$given[1]  else ""
+      out <- trimws(paste(fam %||% "", giv %||% ""))
+      if (nzchar(out)) out else NA_character_
+    } else NA_character_
+  })
+
+  df <- tibble::tibble(
+    doi_clean    = as.character(doi_v),
+    title        = title_v,
+    year         = dplyr::coalesce(
+      suppressWarnings(as.integer(stringr::str_extract(pub_print,  "\\d{4}"))),
+      suppressWarnings(as.integer(stringr::str_extract(pub_online, "\\d{4}")))
+    ),
+    journal      = journal_v,
+    first_author = first_author_v,
+    citations    = suppressWarnings(as.integer(citations_v)),
+    subject      = subject_v,
+    publisher    = as.character(publisher_v),
+    source_db    = "Crossref",
+    corpus_id    = corpus_id,
+    query_date   = Sys.Date()
+  ) %>%
     dplyr::distinct(doi_clean, .keep_all = TRUE)
 
   saveRDS(df, out_rds)
@@ -127,8 +150,6 @@ collect_crossref_corpus <- function(corpus_id, query_str,
   log_step(paste("Crossref Corpus", corpus_id, ":", nrow(df), "registros"), "04_collect_crossref")
   return(df)
 }
-
-`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0) a else b
 
 # Executar
 results_cr <- list()

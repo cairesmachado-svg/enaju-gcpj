@@ -17,9 +17,22 @@ library(dplyr)
 library(progress)
 library(xml2)
 
+# Operador null-coalesce — definido antes das funções que o utilizam.
+`%||%` <- function(a, b) {
+  if (is.null(a)) return(b)
+  if (length(a) == 0) return(b)
+  if (is.atomic(a) && all(is.na(a))) return(b)
+  a
+}
+
 QUERIES <- readRDS(here::here("data", "processed", "queries.rds"))
 
-SCIELO_SEARCH_API <- "https://search.scielo.org/api/v1/article/search"
+# SciELO expõe busca via Solr no portal search.scielo.org.
+# Há dois endpoints úteis:
+#   1) https://search.scielo.org/?q=...&output=site&format=json (interface oficial)
+#   2) https://articlemeta.scielo.org/api/v1/article/  (metadados por PID — usado para
+#      enriquecer registros após a busca)
+SCIELO_SEARCH_API  <- "https://search.scielo.org/"
 SCIELO_ARTICLE_API <- "https://articlemeta.scielo.org/api/v1"
 
 # -----------------------------------------------------------------------------
@@ -49,17 +62,18 @@ collect_scielo_api <- function(corpus_id, query_terms,
     resp <- tryCatch({
       req <- request(SCIELO_SEARCH_API) %>%
         req_url_query(
-          q           = query_terms,
-          count       = per_page,
-          from        = (page - 1) * per_page + 1,
-          output      = "json",
-          lang        = "pt,en,es",
-          format      = "json"
+          q      = query_terms,
+          count  = per_page,
+          from   = (page - 1) * per_page + 1,
+          output = "site",
+          format = "json",
+          lang   = "pt"
         ) %>%
-        req_timeout(30) %>%
-        req_retry(max_tries = 3, backoff = ~5)
+        req_timeout(45) %>%
+        req_retry(max_tries = 3, backoff = ~5) %>%
+        req_user_agent("enaju-gcpj-research/1.0")
 
-      req_perform(resp)
+      req_perform(req)
     }, error = function(e) {
       cat("[ERRO] SciELO API:", conditionMessage(e), "\n")
       NULL
@@ -67,15 +81,20 @@ collect_scielo_api <- function(corpus_id, query_terms,
 
     if (is.null(resp)) break
 
+    body_str <- tryCatch(resp_body_string(resp), error = function(e) "")
     parsed <- tryCatch(
-      jsonlite::fromJSON(resp_body_string(resp), simplifyVector = FALSE),
+      jsonlite::fromJSON(body_str, simplifyVector = FALSE),
       error = function(e) NULL
     )
 
-    if (is.null(parsed)) break
+    if (is.null(parsed)) {
+      cat("[AVISO] SciELO API retornou conteúdo não-JSON; tentando fallback de scraping.\n")
+      break
+    }
 
-    # Extrair artigos do JSON SciELO
-    articles <- parsed$articles$article %||% parsed$response$docs %||% list()
+    # Resposta Solr padrão tem 'response$docs'; respostas alternativas usam 'articles'.
+    articles <- parsed$response$docs %||% parsed$articles$article %||%
+                parsed$articles      %||% list()
 
     if (length(articles) == 0) break
 
@@ -111,10 +130,24 @@ collect_scielo_api <- function(corpus_id, query_terms,
 
   if (length(all_results) == 0) {
     cat("[AVISO] Nenhum resultado SciELO para corpus", corpus_id, "\n")
+    cat("        O endpoint search.scielo.org pode estar bloqueando o IP.\n")
+    cat("        Tentando fallback via scraping...\n")
 
-    # Fallback: scraping do portal SciELO
-    cat("  Tentando fallback via scraping SciELO.org...\n")
-    return(collect_scielo_scraping(corpus_id, query_terms))
+    scrap <- collect_scielo_scraping(corpus_id, query_terms)
+    if (!is.null(scrap) && nrow(scrap) > 0) return(scrap)
+
+    # Último recurso: salvar stub vazio para que scripts a jusante não quebrem.
+    cat("[AVISO] Nenhum dado SciELO obtido; gravando stub vazio.\n")
+    empty_df <- tibble::tibble(
+      pid = character(), doi = character(), title = character(),
+      year = integer(), journal = character(), authors = character(),
+      language = character(), abstract = character(), keywords = character(),
+      subject_area = character(), country = character(),
+      source_db = character(), corpus_id = character(), query_date = as.Date(integer())
+    )
+    saveRDS(empty_df, out_rds)
+    readr::write_csv(empty_df, file.path(out_dir, paste0("scielo_raw_", corpus_id, ".csv")))
+    return(empty_df)
   }
 
   df <- dplyr::bind_rows(all_results) %>%
@@ -146,16 +179,16 @@ collect_scielo_scraping <- function(corpus_id, query_terms,
   all_results <- list()
 
   for (pg in 1:max_pages) {
-    url <- httr2::url_parse(base_url)
-    url$query <- list(
-      q    = URLencode(query_terms),
-      lang = "pt",
-      from = (pg - 1) * per_page + 1,
-      count = per_page
+    full_url <- sprintf(
+      "%s?q=%s&lang=pt&from=%d&count=%d",
+      base_url,
+      utils::URLencode(query_terms, reserved = TRUE),
+      (pg - 1) * per_page + 1,
+      per_page
     )
 
     page_html <- tryCatch({
-      rvest::read_html(httr2::url_build(url))
+      rvest::read_html(full_url)
     }, error = function(e) NULL)
 
     if (is.null(page_html)) break
@@ -181,7 +214,11 @@ collect_scielo_scraping <- function(corpus_id, query_terms,
     Sys.sleep(2)
   }
 
-  if (length(all_results) == 0) return(NULL)
+  if (length(all_results) == 0) {
+    cat("[AVISO] Scraping SciELO falhou para corpus", corpus_id,
+        "(provável bloqueio anti-bot 403).\n")
+    return(NULL)
+  }
 
   df <- dplyr::bind_rows(all_results) %>%
     dplyr::mutate(
@@ -196,8 +233,6 @@ collect_scielo_scraping <- function(corpus_id, query_terms,
   cat("[OK] SciELO scraping Corpus", corpus_id, ":", nrow(df), "registros\n")
   return(df)
 }
-
-`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0 && !all(is.na(a))) a else b
 
 # Executar
 results_sc <- list()

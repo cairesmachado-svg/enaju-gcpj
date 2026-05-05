@@ -14,6 +14,14 @@ library(jsonlite)
 library(dplyr)
 library(progress)
 
+# Operador null-coalesce — definido antes de qualquer função que o utilize.
+`%||%` <- function(a, b) {
+  if (is.null(a)) return(b)
+  if (length(a) == 0) return(b)
+  if (is.atomic(a) && all(is.na(a))) return(b)
+  a
+}
+
 QUERIES <- readRDS(here::here("data", "processed", "queries.rds"))
 
 SS_KEY    <- Sys.getenv("SEMANTIC_SCHOLAR_API_KEY")
@@ -37,10 +45,11 @@ fetch_ss_page <- function(query, offset = 0, limit = 100, api_key = NULL) {
       limit  = limit,
       fields = SS_FIELDS
     ) %>%
-    req_retry(max_tries = 3, backoff = ~10) %>%
-    req_throttle(rate = 1)
+    req_retry(max_tries = 5, backoff = function(i) 15 * i) %>%
+    req_throttle(rate = 1 / 3) %>%   # 1 request a cada 3s, mais polite quando sem chave
+    req_user_agent("enaju-gcpj-research/1.0 (https://github.com/cairesmachado-svg/enaju-gcpj)")
 
-  if (nchar(api_key) > 0) {
+  if (!is.null(api_key) && length(api_key) > 0 && nzchar(api_key)) {
     req <- req %>% req_headers("x-api-key" = api_key)
   }
 
@@ -102,7 +111,20 @@ collect_ss_corpus <- function(corpus_id, query_terms,
 
   if (length(all_papers) == 0) {
     cat("[AVISO] Nenhum resultado SS para corpus", corpus_id, "\n")
-    return(NULL)
+    cat("        Verifique SEMANTIC_SCHOLAR_API_KEY — sem chave o endpoint",
+        "frequentemente retorna HTTP 429.\n")
+
+    # Salvar stub vazio para que pipelines a jusante continuem.
+    empty_df <- tibble::tibble(
+      ss_id = character(), doi = character(), title = character(),
+      year = integer(), citation_count = integer(),
+      venue = character(), journal = character(), first_author = character(),
+      fields_of_study = character(),
+      source_db = character(), corpus_id = character(), query_date = as.Date(integer())
+    )
+    saveRDS(empty_df, out_rds)
+    readr::write_csv(empty_df, file.path(out_dir, paste0("ss_raw_", corpus_id, ".csv")))
+    return(empty_df)
   }
 
   # Converter para data frame
@@ -145,9 +167,6 @@ collect_ss_corpus <- function(corpus_id, query_terms,
   log_step(paste("SemanticScholar Corpus", corpus_id, ":", nrow(df), "registros"), "03_collect_ss")
   return(df)
 }
-
-# Operador null-coalesce
-`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0 && !is.na(a[[1]])) a else b
 
 # Executar
 results_ss <- list()

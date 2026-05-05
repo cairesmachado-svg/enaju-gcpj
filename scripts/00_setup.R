@@ -25,67 +25,82 @@ if (file.exists(env_file)) {
   dotenv::load_dot_env(env_file)
   cat("[OK] .env carregado\n")
 } else {
-  stop(paste(
-    "[ERRO] Arquivo .env não encontrado em:", env_file,
-    "\nCopie .env.example para .env e preencha as credenciais."
-  ))
+  # Em CI (GitHub Actions) ou execução remota, as variáveis podem vir do
+  # ambiente diretamente — não interrompemos por ausência do arquivo.
+  cat("[AVISO] Arquivo .env não encontrado em:", env_file, "\n")
+  cat("        Lendo credenciais diretamente do ambiente do processo.\n")
+  cat("        Para execução local: copie .env.example para .env e preencha.\n")
 }
 
 # -----------------------------------------------------------------------------
 # 2. Instalar e carregar pacotes
 # -----------------------------------------------------------------------------
 
-packages_cran <- c(
-  # Ambiente
-  "here", "dotenv",
-  # Coleta de dados
-  "rscopus", "openalexR", "rcrossref", "httr2", "jsonlite", "xml2",
-  "rvest", "curl",
-  # Manipulação de dados
-  "tidyverse", "dplyr", "stringr", "stringdist", "lubridate",
-  "readr", "writexl", "janitor",
-  # Bibliometria
-  "bibliometrix",
-  # Redes
-  "igraph", "ggraph", "tidygraph",
-  # Text mining e topic modeling
-  "tidytext", "topicmodels", "stm", "quanteda",
-  # Visualização
-  "ggplot2", "ggrepel", "patchwork", "scales", "viridis",
-  "RColorBrewer", "wordcloud2", "treemapify",
-  # Tabelas
-  "knitr", "kableExtra", "gt", "flextable",
-  # Documento
-  "officer", "officedown",
-  # Utilitários
-  "progress", "glue", "purrr", "furrr", "parallel", "fmsb", "maps"
+# Pacotes agrupados por fase do pipeline.
+# Apenas o grupo "essential" é obrigatório para o setup; "collection" para coleta;
+# "analysis" e "render" são checados/instalados sob demanda nas etapas posteriores.
+packages_essential <- c("here", "dotenv", "dplyr", "tibble", "purrr",
+                        "stringr", "readr", "jsonlite", "httr2")
+
+packages_collection <- c("rscopus", "openalexR", "rcrossref",
+                         "xml2", "rvest", "curl", "progress")
+
+packages_analysis <- c("tidyverse", "stringdist", "lubridate", "writexl", "janitor",
+                       "bibliometrix", "igraph", "ggraph", "tidygraph",
+                       "tidytext", "topicmodels", "stm", "quanteda",
+                       "ggplot2", "ggrepel", "patchwork", "scales", "viridis",
+                       "RColorBrewer", "wordcloud2", "treemapify",
+                       "knitr", "kableExtra", "gt", "flextable",
+                       "officer", "officedown",
+                       "glue", "furrr", "fmsb", "maps")
+
+# A fase é controlada pela variável de ambiente ENAJU_PHASE
+# (collection|analysis|all). Default = "all" para compatibilidade.
+phase <- toupper(Sys.getenv("ENAJU_PHASE", "all"))
+
+target_pkgs <- switch(phase,
+  "COLLECTION" = unique(c(packages_essential, packages_collection)),
+  "ANALYSIS"   = unique(c(packages_essential, packages_collection, packages_analysis)),
+  unique(c(packages_essential, packages_collection, packages_analysis))
 )
 
-cat("\nVerificando pacotes...\n")
-missing_pkgs <- packages_cran[!packages_cran %in% installed.packages()[, "Package"]]
+cat(sprintf("\nFase: %s — verificando %d pacote(s)...\n", phase, length(target_pkgs)))
+
+installed_now <- rownames(installed.packages())
+missing_pkgs  <- setdiff(target_pkgs, installed_now)
 
 if (length(missing_pkgs) > 0) {
-  cat("Instalando", length(missing_pkgs), "pacote(s):", paste(missing_pkgs, collapse = ", "), "\n")
-  install.packages(missing_pkgs, repos = "https://cloud.r-project.org", dependencies = TRUE)
-} else {
-  cat("[OK] Todos os pacotes CRAN já instalados\n")
+  cat("Instalando", length(missing_pkgs), "pacote(s):",
+      paste(missing_pkgs, collapse = ", "), "\n")
+  try(install.packages(missing_pkgs,
+                       repos = "https://cloud.r-project.org",
+                       dependencies = TRUE), silent = FALSE)
 }
 
-# Carregar pacotes essenciais
+# Reportar pacotes que falharam ao instalar (não interromper o setup;
+# scripts subsequentes informam o que falta).
+installed_now <- rownames(installed.packages())
+still_missing <- setdiff(target_pkgs, installed_now)
+if (length(still_missing) > 0) {
+  cat("[AVISO] Pacotes não instalados (verifique dependências de sistema):",
+      paste(still_missing, collapse = ", "), "\n")
+} else {
+  cat("[OK] Todos os pacotes da fase '", phase, "' presentes\n", sep = "")
+}
+
+# Carregar somente o que estiver disponível; scripts de coleta carregam o que precisarem.
+core_libs <- c("here", "dotenv", "dplyr", "purrr", "stringr",
+               "readr", "tibble", "jsonlite", "httr2")
 suppressPackageStartupMessages({
-  library(here)
-  library(dotenv)
-  library(tidyverse)
-  library(bibliometrix)
-  library(rscopus)
-  library(openalexR)
-  library(rcrossref)
-  library(httr2)
-  library(jsonlite)
-  library(stringdist)
-  library(igraph)
+  for (lib in core_libs) {
+    if (requireNamespace(lib, quietly = TRUE)) {
+      library(lib, character.only = TRUE)
+    } else {
+      cat("[AVISO] Pacote essencial ausente:", lib, "\n")
+    }
+  }
 })
-cat("[OK] Pacotes carregados\n")
+cat("[OK] Pacotes essenciais carregados\n")
 
 # -----------------------------------------------------------------------------
 # 3. Verificar credenciais
