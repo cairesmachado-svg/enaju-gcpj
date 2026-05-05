@@ -1,0 +1,38 @@
+=== ENAJU-GCPJ | Setup do Ambiente ===
+Iniciado em: 2026-05-05 16:41:20 
+
+here() starts at C:/Users/Adm/OneDrive/Documentos/GitHub/enaju-gcpj
+[OK] .env carregado
+
+Verificando pacotes...
+[OK] Todos os pacotes CRAN já instalados
+[OK] Pacotes carregados
+
+--- Verificação de Credenciais ---
+[OK]     SCOPUS_API_KEY : configurada
+[INFO]   SCOPUS_INST_TOKEN : não configurada (opcional)
+[OK]     SEMANTIC_SCHOLAR_API_KEY : configurada
+[OK]     CROSSREF_EMAIL : configurada
+[OK]     OPENALEX_EMAIL : configurada
+[INFO]   SCIELO_EMAIL : não configurada (opcional)
+[OK] rscopus configurado
+[OK] openalexR polite pool configurado
+
+--- Estrutura de Diretórios ---
+[OK]     data/raw/corpus_A 
+[OK]     data/raw/corpus_B 
+[OK]     data/raw/corpus_C 
+[OK]     data/raw/corpus_D 
+[OK]     data/raw/semantic_scholar 
+[OK]     data/raw/crossref 
+[OK]     data/raw/scielo 
+[OK]     data/processed 
+[OK]     data/outputs/figures 
+[OK]     data/outputs/tables 
+[OK]     data/outputs/networks 
+[OK]     logs 
+- **[2026-05-05 16:41:24]** [00_setup] Setup concluído com sucesso 
+
+[OK] Queries de busca definidas e salvas
+
+Setup finalizado. Próximo passo: execute 01_collect_scopus.R

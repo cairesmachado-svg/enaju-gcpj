@@ -1,0 +1,59 @@
+project:
+  type: default
+  output-dir: _output
+
+# Configuração global do projeto
+title: "ENAJU-GCPJ — Mapeamento Bibliométrico Global"
+author: "[Omitido para avaliação cega]"
+
+# Perfis de renderização
+profile:
+  default: html
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    fig-cap-location: bottom
+    embed-resources: true
+    lang: pt-BR
+    code-fold: true
+    code-summary: "Ver código"
+    highlight-style: github
+    css: []
+    html-math-method: mathjax
+
+  docx:
+    reference-doc: article/rap_reference.docx
+    toc: false
+    number-sections: false
+    highlight-style: github
+    fig-cap-location: bottom
+    fig-width: 6.5
+    fig-height: 4.5
+    lang: pt-BR
+
+# Execução
+execute:
+  echo: false
+  warning: false
+  message: false
+  cache: true
+  freeze: auto
+
+# Referências
+bibliography: article/references.bib
+csl: article/associacao-brasileira-de-normas-tecnicas.csl
+link-citations: true
+lang: pt-BR
+
+# Metadados do projeto
+knitr:
+  opts_chunk:
+    fig.path: "data/outputs/figures/"
+    dpi: 300
+    dev: "png"
+    out.width: "90%"
+    fig.align: "center"

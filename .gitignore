@@ -1,0 +1,53 @@
+# Ambiente e credenciais
+.env
+*.env
+
+# Dados brutos e processados (volume grande, não versionar)
+data/raw/
+data/processed/
+data/outputs/
+
+# Logs
+logs/*.log
+logs/pipeline_log.md
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+renv/python/
+renv/staging/
+
+# Quarto/knitr cache
+*_cache/
+*_files/
+.quarto/
+_site/
+
+# Outputs finais (gerados, não versionar)
+article/*.docx
+article/*.html
+article/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/settings.json
+
+# Outputs de renderização intermediários
+article/*.html
+article/enaju-gcpj-article_files/
+_output/
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/settings.json
+
+/.quarto/
+**/*.quarto_ipynb

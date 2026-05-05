@@ -1,0 +1,68 @@
+=== ENAJU-GCPJ | Setup do Ambiente ===
+Iniciado em: 2026-05-05 16:43:48 
+
+here() starts at C:/Users/Adm/OneDrive/Documentos/GitHub/enaju-gcpj
+[OK] .env carregado
+
+Verificando pacotes...
+[OK] Todos os pacotes CRAN já instalados
+[OK] Pacotes carregados
+
+--- Verificação de Credenciais ---
+[OK]     SCOPUS_API_KEY : configurada
+[INFO]   SCOPUS_INST_TOKEN : não configurada (opcional)
+[OK]     SEMANTIC_SCHOLAR_API_KEY : configurada
+[OK]     CROSSREF_EMAIL : configurada
+[OK]     OPENALEX_EMAIL : configurada
+[INFO]   SCIELO_EMAIL : não configurada (opcional)
+[OK] rscopus configurado
+[OK] openalexR polite pool configurado
+
+--- Estrutura de Diretórios ---
+[OK]     data/raw/corpus_A 
+[OK]     data/raw/corpus_B 
+[OK]     data/raw/corpus_C 
+[OK]     data/raw/corpus_D 
+[OK]     data/raw/semantic_scholar 
+[OK]     data/raw/crossref 
+[OK]     data/raw/scielo 
+[OK]     data/processed 
+[OK]     data/outputs/figures 
+[OK]     data/outputs/tables 
+[OK]     data/outputs/networks 
+[OK]     logs 
+- **[2026-05-05 16:44:02]** [00_setup] Setup concluído com sucesso 
+
+[OK] Queries de busca definidas e salvas
+
+Setup finalizado. Próximo passo: execute 01_collect_scopus.R
+- **[2026-05-05 16:44:03]** [02_collect_openalex] Iniciando coleta OpenAlex 
+
+--- Coletando Corpus A via OpenAlex ---
+Requesting url:
+<https://api.openalex.org/works?search=%22corporate%20education%22%20OR%20%22corporate%20university%22%20OR%20%22corporate%20learning%22%20OR%20%22workplace%20learning%22%20OR%20%22organizational%20learning%22%20OR%20%22human%20resource%20development%22&select=id%2Cdoi%2Ctitle%2Cdisplay_name%2Cpublication_year%2Cpublication_date%2Ctype%2Ccited_by_count%2Cauthorships%2Cprimary_location%2Copen_access%2Cconcepts%2Ckeywords%2Cabstract_inverted_index%2Creferenced_works_count%2Ccounts_by_year>
+ℹ Getting 1315 pages of results with a total of 262985 records...
+⠙ OpenAlex downloading [2/1315] ■                                  0% ETA: 33m
+⠹ OpenAlex downloading [3/1315] ■                                  0% ETA: 45m
+⠸ OpenAlex downloading [4/1315] ■                                  0% ETA: 49m
+⠼ OpenAlex downloading [5/1315] ■                                  0% ETA:  1h
+⠴ OpenAlex downloading [6/1315] ■                                  0% ETA:  1h
+⠦ OpenAlex downloading [7/1315] ■                                  1% ETA:  1h
+⠧ OpenAlex downloading [8/1315] ■                                  1% ETA:  1h
+⠇ OpenAlex downloading [10/1315] ■                                  1% ETA:  1h
+⠏ OpenAlex downloading [11/1315] ■                                  1% ETA:  1h
+⠋ OpenAlex downloading [12/1315] ■                                  1% ETA:  1h
+⠙ OpenAlex downloading [13/1315] ■                                  1% ETA:  1h
+⠹ OpenAlex downloading [14/1315] ■                                  1% ETA:  1h
+⠸ OpenAlex downloading [16/1315] ■                                  1% ETA:  1h
+⠼ OpenAlex downloading [17/1315] ■                                  1% ETA:  1h
+⠴ OpenAlex downloading [18/1315] ■                                  1% ETA:  1h
+⠦ OpenAlex downloading [20/1315] ■                                  2% ETA:  1h
+⠧ OpenAlex downloading [21/1315] ■                                  2% ETA:  1h
+⠇ OpenAlex downloading [22/1315] ■■                                 2% ETA:  1h
+⠏ OpenAlex downloading [23/1315] ■■                                 2% ETA:  1h
+⠋ OpenAlex downloading [24/1315] ■■                                 2% ETA:  1h
+⠙ OpenAlex downloading [25/1315] ■■                                 2% ETA:  1h
+⠹ OpenAlex downloading [26/1315] ■■                                 2% ETA:  1h
+⠸ OpenAlex downloading [27/1315] ■■                                 2% ETA:  1h
+⠼ OpenAlex downloading [28/1315] ■■                                 2% ETA:  1h

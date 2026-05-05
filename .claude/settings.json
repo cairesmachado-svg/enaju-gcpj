@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adm\\\\OneDrive\\\\Documentos\\\\GitHub\\\\enaju-gcpj\")",
+      "Bash(Select-Object Name, FullName)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(\"/c/Program Files/R/R-4.6.0/bin/Rscript.exe\" run_project.R --help)",
+      "Bash(quarto --version)",
+      "Bash(\"/c/Program Files/R/R-4.6.0/bin/Rscript.exe\" generate_rap_reference_docx.R)",
+      "Bash(quarto render *)"
+    ]
+  }
+}
