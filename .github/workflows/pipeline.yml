@@ -1,0 +1,202 @@
+name: Run bibliometric pipeline
+
+# Executa as fases de processamento, análise e (opcional) renderização do artigo
+# (scripts 06–14, 99). Pode reaproveitar artifacts de coletas anteriores
+# baixando-os a partir de um run específico do workflow "Collect bibliometric data".
+on:
+  workflow_dispatch:
+    inputs:
+      from_step:
+        description: "Script inicial (ex.: 06 para começar do merge; 08 para análises)"
+        required: false
+        default: "06"
+      run_render:
+        description: "Renderizar o artigo Quarto ao final (true/false)"
+        required: false
+        default: "false"
+      raw_artifact_run_id:
+        description: "Run ID do workflow 'Collect bibliometric data' para baixar data/raw como ponto de partida (opcional)"
+        required: false
+        default: ""
+      processed_artifact_run_id:
+        description: "Run ID para baixar data/processed (opcional)"
+        required: false
+        default: ""
+      r_version:
+        description: "Versão do R"
+        required: false
+        default: "4.4.1"
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      ENAJU_PHASE: analysis
+      SCOPUS_API_KEY: ${{ secrets.SCOPUS_API_KEY }}
+      SCOPUS_INST_TOKEN: ${{ secrets.SCOPUS_INST_TOKEN }}
+      SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
+      CROSSREF_EMAIL: ${{ secrets.CROSSREF_EMAIL }}
+      OPENALEX_EMAIL: ${{ secrets.OPENALEX_EMAIL }}
+      SCIELO_EMAIL: ${{ secrets.SCIELO_EMAIL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ inputs.r_version }}
+          use-public-rspm: true
+
+      - name: Set up Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Set up Quarto
+        if: ${{ inputs.run_render == 'true' }}
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libcurl4-openssl-dev libssl-dev libxml2-dev \
+            libuv1-dev cmake pkg-config \
+            libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
+            libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
+            libgit2-dev libudunits2-dev libgdal-dev gdal-bin \
+            libglpk-dev
+
+      - name: Install R packages (analysis phase)
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          cache-version: 2
+          packages: |
+            any::here
+            any::dotenv
+            any::tidyverse
+            any::dplyr
+            any::tibble
+            any::purrr
+            any::stringr
+            any::readr
+            any::jsonlite
+            any::httr2
+            any::stringdist
+            any::lubridate
+            any::writexl
+            any::janitor
+            any::bibliometrix
+            any::igraph
+            any::ggraph
+            any::tidygraph
+            any::tidytext
+            any::topicmodels
+            any::stm
+            any::quanteda
+            any::ggplot2
+            any::ggrepel
+            any::patchwork
+            any::scales
+            any::viridis
+            any::RColorBrewer
+            any::wordcloud2
+            any::treemapify
+            any::knitr
+            any::kableExtra
+            any::gt
+            any::flextable
+            any::officer
+            any::officedown
+            any::glue
+            any::furrr
+            any::fmsb
+            any::maps
+            any::quarto
+
+      - name: Download raw data artifact (optional)
+        if: ${{ inputs.raw_artifact_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: enaju-raw-data
+          path: data/raw
+          run-id: ${{ inputs.raw_artifact_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download processed data artifact (optional)
+        if: ${{ inputs.processed_artifact_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: enaju-processed-data
+          path: data/processed
+          run-id: ${{ inputs.processed_artifact_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run setup
+        run: Rscript scripts/00_setup.R
+
+      - name: Run pipeline (06–14)
+        run: |
+          Rscript run_all.R --from "${{ inputs.from_step }}"
+
+      - name: Render article (Quarto)
+        if: ${{ inputs.run_render == 'true' }}
+        run: Rscript scripts/99_render_article.R
+
+      - name: Summarize outputs
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Resumo do pipeline"
+            echo ""
+            echo "### data/processed"
+            shopt -s globstar nullglob
+            for f in data/processed/**/*; do
+              [ -f "$f" ] && echo "- $f ($(stat -c%s "$f") bytes)"
+            done
+            echo ""
+            echo "### data/outputs"
+            for f in data/outputs/**/*; do
+              [ -f "$f" ] && echo "- $f ($(stat -c%s "$f") bytes)"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload processed data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enaju-processed-data
+          path: data/processed/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload outputs (figures, tables, networks)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enaju-outputs
+          path: data/outputs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload rendered article
+        if: ${{ always() && inputs.run_render == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: enaju-article
+          path: |
+            article/*.html
+            article/*.docx
+            article/*.pdf
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enaju-logs
+          path: logs/
+          if-no-files-found: ignore
+          retention-days: 14
