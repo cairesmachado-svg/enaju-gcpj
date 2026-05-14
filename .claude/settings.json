@@ -7,7 +7,13 @@
       "Bash(\"/c/Program Files/R/R-4.6.0/bin/Rscript.exe\" run_project.R --help)",
       "Bash(quarto --version)",
       "Bash(\"/c/Program Files/R/R-4.6.0/bin/Rscript.exe\" generate_rap_reference_docx.R)",
-      "Bash(quarto render *)"
+      "Bash(quarto render *)",
+      "Bash(python -c ' *)",
+      "Bash(python scripts/generate_cobpit_article.py)",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
