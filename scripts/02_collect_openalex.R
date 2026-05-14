@@ -23,7 +23,10 @@ if (nchar(oa_email) > 0) options(openalexR.mailto = oa_email)
 # -----------------------------------------------------------------------------
 
 collect_openalex_corpus <- function(corpus_id, search_terms,
-                                     per_page = 200, max_results = 10000) {
+                                     per_page = 200,
+                                     max_results = as.integer(
+                                       Sys.getenv("ENAJU_OPENALEX_MAX",
+                                                  unset = "5000"))) {
 
   cat("\n--- Coletando Corpus", corpus_id, "via OpenAlex ---\n")
 
@@ -36,21 +39,22 @@ collect_openalex_corpus <- function(corpus_id, search_terms,
     return(readRDS(out_rds))
   }
 
-  # Usar oa_fetch para busca por texto livre
+  # Usar oa_fetch para busca por texto livre.
+  # OBS: openalexR aceita 'search' como string e respeita a sintaxe OR/AND nativa.
+  # Restringimos por publication_year para o recorte 1995-2025.
+  # Limitamos número de páginas para respeitar max_results — oa_fetch baixa
+  # tudo se 'pages' não for especificado, o que pode ser muito custoso.
+  pages_needed <- max(1L, ceiling(max_results / per_page))
   result <- tryCatch({
     openalexR::oa_fetch(
-      entity        = "works",
-      search        = search_terms,
-      per_page      = per_page,
-      count_only    = FALSE,
-      verbose       = TRUE,
-      options       = list(select = paste(
-        "id,doi,title,display_name,publication_year,publication_date",
-        "type,cited_by_count,authorships,primary_location",
-        "open_access,concepts,keywords,abstract_inverted_index",
-        "referenced_works_count,counts_by_year",
-        sep = ","
-      ))
+      entity            = "works",
+      search            = search_terms,
+      from_publication_date = "1995-01-01",
+      to_publication_date   = "2025-12-31",
+      per_page          = per_page,
+      pages             = seq_len(pages_needed),
+      count_only        = FALSE,
+      verbose           = TRUE
     )
   }, error = function(e) {
     cat("[ERRO] OpenAlex falhou para corpus", corpus_id, ":", conditionMessage(e), "\n")
@@ -62,48 +66,94 @@ collect_openalex_corpus <- function(corpus_id, search_terms,
     return(NULL)
   }
 
-  # Limitar ao máximo definido
-  if (nrow(result) > max_results) result <- result[1:max_results, ]
+  # Garantia adicional: limitar ao máximo definido (caso oa_fetch retorne além).
+  if (nrow(result) > max_results) result <- result[seq_len(max_results), ]
 
-  # Extrair campos planos
-  df <- result %>%
-    dplyr::mutate(
-      source_db  = "OpenAlex",
-      corpus_id  = corpus_id,
-      query_date = Sys.Date(),
-      # Extrair DOI limpo
-      doi_clean  = dplyr::if_else(
-        !is.na(doi),
-        stringr::str_remove(doi, "https://doi.org/"),
-        NA_character_
-      ),
-      # Extrair primeiros autores
-      first_author = purrr::map_chr(authorships, function(a) {
-        if (is.data.frame(a) && nrow(a) > 0 && "author" %in% names(a)) {
-          tryCatch(a$author[[1]]$display_name[1], error = function(e) NA_character_)
-        } else NA_character_
-      }),
-      # Journal/fonte
-      journal = purrr::map_chr(primary_location, function(loc) {
-        if (is.list(loc) && !is.null(loc$source)) {
-          tryCatch(loc$source$display_name, error = function(e) NA_character_)
-        } else NA_character_
-      }),
-      # Country
-      country_first_author = purrr::map_chr(authorships, function(a) {
-        if (is.data.frame(a) && nrow(a) > 0 && "institutions" %in% names(a)) {
-          inst <- a$institutions[[1]]
-          if (is.data.frame(inst) && "country_code" %in% names(inst))
-            tryCatch(inst$country_code[1], error = function(e) NA_character_)
-          else NA_character_
-        } else NA_character_
-      })
-    ) %>%
-    dplyr::select(
-      id, doi_clean, title = display_name, year = publication_year,
-      type, cited_by_count, first_author, journal, country_first_author,
-      open_access, source_db, corpus_id, query_date
-    )
+  # Extrair campos planos.
+  # openalexR retorna nomes diferentes conforme versão: 'doi' ou 'id' (URL OpenAlex);
+  # 'display_name' como título; 'authorships' como list-col aninhada.
+  # Aplicamos defesas para variações de schema.
+  has_col <- function(d, col) col %in% names(d)
+
+  # openalexR (>= 2.x) achata authorships em uma tibble por linha com colunas:
+  # id, display_name, orcid, author_position, affiliations (list-col), affiliation_raw
+  safe_first_author <- function(a) {
+    if (is.null(a)) return(NA_character_)
+    if (is.data.frame(a) && nrow(a) > 0) {
+      if ("display_name" %in% names(a)) return(as.character(a$display_name[1]))
+      if ("au_display_name" %in% names(a)) return(as.character(a$au_display_name[1]))
+      if ("author" %in% names(a)) {
+        au <- a$author[[1]]
+        if (is.list(au) && !is.null(au$display_name)) return(as.character(au$display_name))
+      }
+    }
+    NA_character_
+  }
+
+  safe_country <- function(a) {
+    if (is.null(a)) return(NA_character_)
+    if (is.data.frame(a) && nrow(a) > 0) {
+      # Versão atual: 'affiliations' é uma list-col com tibble por autor;
+      # cada tibble pode ter colunas country_code / institution_id.
+      if ("affiliations" %in% names(a)) {
+        aff <- a$affiliations[[1]]
+        if (is.data.frame(aff) && "country_code" %in% names(aff))
+          return(as.character(aff$country_code[1]))
+      }
+      # Versão antiga: 'institutions'
+      if ("institutions" %in% names(a)) {
+        inst <- a$institutions[[1]]
+        if (is.data.frame(inst) && "country_code" %in% names(inst))
+          return(as.character(inst$country_code[1]))
+      }
+    }
+    NA_character_
+  }
+
+  safe_journal <- function(loc) {
+    if (is.null(loc)) return(NA_character_)
+    if (is.list(loc) && !is.null(loc$source)) {
+      src <- loc$source
+      if (is.list(src) && !is.null(src$display_name)) return(as.character(src$display_name))
+    }
+    NA_character_
+  }
+
+  doi_col   <- if (has_col(result, "doi")) result$doi else rep(NA_character_, nrow(result))
+  title_col <- if (has_col(result, "display_name")) result$display_name
+               else if (has_col(result, "title")) result$title
+               else rep(NA_character_, nrow(result))
+  year_col  <- if (has_col(result, "publication_year")) result$publication_year else NA_integer_
+  type_col  <- if (has_col(result, "type")) result$type else NA_character_
+  cit_col   <- if (has_col(result, "cited_by_count")) result$cited_by_count else NA_integer_
+  oa_col    <- if (has_col(result, "open_access")) result$open_access else NA
+  id_col    <- if (has_col(result, "id")) result$id else seq_len(nrow(result))
+
+  first_author_v <- if (has_col(result, "authorships"))
+    purrr::map_chr(result$authorships, safe_first_author) else NA_character_
+  country_v <- if (has_col(result, "authorships"))
+    purrr::map_chr(result$authorships, safe_country) else NA_character_
+  journal_v <- if (has_col(result, "source_display_name")) result$source_display_name
+               else if (has_col(result, "primary_location"))
+                 purrr::map_chr(result$primary_location, safe_journal)
+               else if (has_col(result, "so")) result$so else NA_character_
+
+  df <- tibble::tibble(
+    id           = id_col,
+    doi_clean    = stringr::str_remove(ifelse(is.na(doi_col), NA_character_, doi_col),
+                                       "^https?://doi\\.org/"),
+    title        = title_col,
+    year         = year_col,
+    type         = type_col,
+    cited_by_count = cit_col,
+    first_author = first_author_v,
+    journal      = journal_v,
+    country_first_author = country_v,
+    open_access  = oa_col,
+    source_db    = "OpenAlex",
+    corpus_id    = corpus_id,
+    query_date   = Sys.Date()
+  )
 
   saveRDS(df, out_rds)
   readr::write_csv(df, out_csv)
@@ -118,13 +168,14 @@ collect_openalex_corpus <- function(corpus_id, search_terms,
 # -----------------------------------------------------------------------------
 
 results_oa <- list()
+oa_max <- as.integer(Sys.getenv("ENAJU_OPENALEX_MAX", unset = "5000"))
 for (corp in c("A", "B", "C", "D")) {
   Sys.sleep(1)
   results_oa[[corp]] <- collect_openalex_corpus(
     corpus_id    = corp,
     search_terms = QUERIES[[corp]]$openalex,
     per_page     = 200,
-    max_results  = 10000
+    max_results  = oa_max
   )
 }
 

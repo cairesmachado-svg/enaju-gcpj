@@ -108,6 +108,87 @@ O pipeline gera automaticamente um log de execução em `logs/pipeline_log.md` c
 
 ---
 
+## Execução pelo GitHub Actions
+
+O repositório inclui dois workflows que permitem executar todo o pipeline a
+partir da interface do GitHub, sem necessidade de máquina local.
+
+### Secrets necessários
+
+Em **Settings → Secrets and variables → Actions**, configure:
+
+| Secret | Status | Uso |
+|---|---|---|
+| `SCOPUS_API_KEY` | obrigatório p/ Scopus | autenticação `rscopus` |
+| `SCOPUS_INST_TOKEN` | opcional | Scopus institucional |
+| `OPENALEX_EMAIL` | recomendado | polite pool OpenAlex |
+| `CROSSREF_EMAIL` | recomendado | polite pool Crossref |
+| `SEMANTIC_SCHOLAR_API_KEY` | opcional | evita HTTP 429 no SS |
+| `SCIELO_EMAIL` | opcional | reservado |
+
+Nada é versionado: o `.gitignore` bloqueia `.env` e `data/`; nos workflows
+os secrets são injetados via `env:` e nunca aparecem nos logs.
+
+### 1. Workflow `Collect bibliometric data` (`.github/workflows/collect.yml`)
+
+Roda os scripts `01–05` (coleta) com cache de pacotes R.
+
+1. **Actions → Collect bibliometric data → Run workflow**.
+2. Inputs:
+   - `sources` — coletas a executar, separadas por vírgula. Default: `openalex,crossref,semantic_scholar,scielo`. Use `scopus,openalex,semantic_scholar,crossref,scielo` para incluir Scopus.
+   - `openalex_max` (default `5000`) — máx. de registros por corpus no OpenAlex.
+   - `crossref_max` (default `2000`) — máx. de registros por corpus no Crossref.
+   - `r_version` (default `4.4.1`).
+3. Artifacts gerados (retenção 14 dias):
+   - `enaju-raw-data` → `data/raw/**`
+   - `enaju-processed-data` → `data/processed/**` (queries, etc.)
+   - `enaju-logs` → `logs/**`
+
+### 2. Workflow `Run bibliometric pipeline` (`.github/workflows/pipeline.yml`)
+
+Roda os scripts `06–14` (merge, deduplicação, análises bibliométricas) e,
+opcionalmente, `99` (renderização Quarto do artigo).
+
+1. **Actions → Run bibliometric pipeline → Run workflow**.
+2. Inputs:
+   - `from_step` — script inicial (ex.: `06`, `08`).
+   - `run_render` — `true` para renderizar o artigo ao final.
+   - `raw_artifact_run_id` (opcional) — Run ID do `Collect bibliometric data` para baixar `data/raw/**` antes de rodar.
+   - `processed_artifact_run_id` (opcional) — idem para `data/processed/**`.
+   - `r_version` (default `4.4.1`).
+3. Artifacts gerados:
+   - `enaju-processed-data` (14 dias)
+   - `enaju-outputs` → figuras, tabelas, redes (30 dias)
+   - `enaju-article` → HTML/DOCX/PDF do artigo, se renderizado (30 dias)
+   - `enaju-logs` (14 dias)
+
+### Fluxo recomendado (100% no GitHub)
+
+1. Disparar `Collect bibliometric data` → aguardar conclusão.
+2. Anotar o **Run ID** desse run (URL termina em `.../runs/<ID>`).
+3. Disparar `Run bibliometric pipeline` informando esse Run ID em `raw_artifact_run_id` e (se quiser renderizar) `run_render=true`.
+4. Baixar `enaju-outputs` e `enaju-article` ao final.
+
+### Como baixar artifacts
+
+Na página do run concluído, role até a seção **Artifacts** e clique no nome do
+artifact desejado para baixar um `.zip`. Também é possível usar o `gh` CLI:
+
+```bash
+gh run download <RUN_ID> -n enaju-raw-data -D ./data/raw
+gh run download <RUN_ID> -n enaju-outputs   -D ./data/outputs
+```
+
+### Variáveis de ambiente reconhecidas pelos scripts
+
+| Variável | Função | Default |
+|---|---|---|
+| `ENAJU_PHASE` | `collection` instala apenas pacotes da fase de coleta; `analysis` instala tudo. | `all` |
+| `ENAJU_OPENALEX_MAX` | Máx. registros por corpus em `02_collect_openalex.R` | `5000` |
+| `ENAJU_CROSSREF_MAX` | Máx. registros por corpus em `04_collect_crossref.R` | `2000` |
+
+---
+
 ## Licença
 
 Código sob licença MIT. Dados coletados das bases respeitam os termos de uso de cada provedor.
