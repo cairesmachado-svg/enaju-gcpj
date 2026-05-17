@@ -18,6 +18,8 @@ library(patchwork)
 corpus_full <- readRDS(here::here("data", "processed", "corpus_full.rds"))
 cat("Corpus carregado:", nrow(corpus_full), "registros\n")
 
+study_end_year <- 2025L
+
 # -----------------------------------------------------------------------------
 # 1. Dicionário de termos por campo temático (para reclassificação)
 # -----------------------------------------------------------------------------
@@ -101,8 +103,8 @@ corpus_full <- corpus_full %>%
     # Excluir registros sem título
     exclude_no_title = is.na(title) | nchar(trimws(title %||% "")) < 5,
 
-    # Excluir publicações fora do período (1995–atual)
-    exclude_year = !is.na(year) & (year < 1995 | year > as.integer(format(Sys.Date(), "%Y"))),
+    # Excluir publicações fora do período declarado no artigo (1995–2025)
+    exclude_year = !is.na(year) & (year < 1995 | year > study_end_year),
 
     # Excluir tipos não-artigo para análise principal (pode relaxar para E2)
     exclude_type = dplyr::case_when(

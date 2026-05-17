@@ -8,8 +8,36 @@
 source(here::here("scripts", "00_setup.R"))
 log_step("Iniciando renderização do artigo", "99_render_article")
 
-library(quarto)
 library(officer)
+
+render_quarto <- function(input, output_format) {
+  if (requireNamespace("quarto", quietly = TRUE)) {
+    quarto::quarto_render(
+      input          = input,
+      output_format  = output_format,
+      execute_params = list(render_date = as.character(Sys.Date()))
+    )
+    return(invisible(TRUE))
+  }
+
+  quarto_bin <- Sys.which("quarto")
+  if (!nzchar(quarto_bin)) {
+    stop("Pacote R 'quarto' ausente e CLI 'quarto' não encontrado no PATH.")
+  }
+
+  cmd_out <- system2(
+    quarto_bin,
+    args = c("render", input, "--to", output_format),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  status <- attr(cmd_out, "status")
+  if (!is.null(status) && status != 0) {
+    cat(paste(cmd_out, collapse = "\n"), "\n")
+    stop("Quarto CLI falhou com status ", status)
+  }
+  invisible(TRUE)
+}
 
 # -----------------------------------------------------------------------------
 # 1. Verificar dependências (todos os outputs dos scripts anteriores)
@@ -90,13 +118,7 @@ if (!file.exists(article_qmd)) {
 cat("--- Renderizando HTML ---\n")
 
 html_result <- tryCatch({
-  quarto::quarto_render(
-    input          = article_qmd,
-    output_format  = "html",
-    execute_params = list(
-      render_date = as.character(Sys.Date())
-    )
-  )
+  render_quarto(article_qmd, "html")
   cat("[OK] HTML renderizado\n")
   TRUE
 }, error = function(e) {
@@ -107,13 +129,7 @@ html_result <- tryCatch({
 cat("\n--- Renderizando DOCX (formato RAP) ---\n")
 
 docx_result <- tryCatch({
-  quarto::quarto_render(
-    input         = article_qmd,
-    output_format = "docx",
-    execute_params = list(
-      render_date = as.character(Sys.Date())
-    )
-  )
+  render_quarto(article_qmd, "docx")
   cat("[OK] DOCX renderizado\n")
   TRUE
 }, error = function(e) {

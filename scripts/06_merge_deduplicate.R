@@ -38,13 +38,17 @@ load_corpus_files <- function(corpus_id) {
 
     # Mapear colunas variantes ao esquema unificado
     col_map <- list(
-      doi   = c("doi_clean", "doi", "externalids_doi"),
-      title = c("title", "display_name", "ti"),
-      year  = c("year", "publication_year", "pubdate"),
-      journal = c("journal", "venue", "container_title", "journal_title", "ta"),
-      authors = c("first_author", "authors", "author"),
-      citations = c("citations", "cited_by_count", "citation_count", "is_referenced_by_count"),
-      abstract = c("abstract", "ab_pt", "ab_en")
+      doi   = c("doi_clean", "doi", "externalids_doi", "prism_doi"),
+      title = c("title", "display_name", "ti", "dc_title"),
+      year  = c("year", "publication_year", "pubdate", "prism_cover_date"),
+      journal = c("journal", "venue", "container_title", "journal_title", "ta",
+                  "prism_publication_name"),
+      authors = c("first_author", "authors", "author", "dc_creator"),
+      citations = c("citations", "cited_by_count", "citation_count",
+                    "is_referenced_by_count", "citedby_count"),
+      abstract = c("abstract", "ab_pt", "ab_en"),
+      type = c("type", "publication_type", "subtype_description", "subtype",
+               "prism_aggregation_type")
     )
 
     for (target in names(col_map)) {
@@ -59,11 +63,22 @@ load_corpus_files <- function(corpus_id) {
       }
     }
 
+    optional_cols <- c(
+      "source_db", "corpus_id", "query_date", "language",
+      "country", "keywords", "fields_of_study"
+    )
+    for (col in optional_cols) {
+      if (!col %in% names(df)) df[[col]] <- NA_character_
+    }
+
     df %>%
+      dplyr::mutate(
+        year = as.integer(stringr::str_extract(as.character(year), "\\d{4}")),
+        citations = suppressWarnings(as.integer(citations))
+      ) %>%
       dplyr::select(
-        doi, title, year, journal, authors, citations, abstract,
-        dplyr::any_of(c("source_db", "corpus_id", "query_date",
-                        "language", "country", "keywords", "fields_of_study"))
+        doi, title, year, journal, authors, citations, abstract, type,
+        dplyr::all_of(optional_cols)
       )
   })
 

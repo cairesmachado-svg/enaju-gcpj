@@ -16,6 +16,8 @@ Saída:
 import os
 import sys
 import copy
+import csv
+from collections import Counter
 from docx import Document
 from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -29,6 +31,8 @@ ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 TEMPLATE_PATH = os.path.join(ROOT_DIR, "template-tc-cobpit.docx")
 OUTPUT_DIR = os.path.join(ROOT_DIR, "_output", "article")
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, "enaju-gcpj-cobpit-tc.docx")
+CORPUS_ELIGIBLE_CSV = os.path.join(ROOT_DIR, "data", "processed", "corpus_eligible.csv")
+DEDUP_REPORT_CSV = os.path.join(ROOT_DIR, "data", "processed", "dedup_report.csv")
 
 # ---------------------------------------------------------------------------
 # Verificações
@@ -37,6 +41,83 @@ if not os.path.exists(TEMPLATE_PATH):
     sys.exit(f"[ERRO] Template não encontrado: {TEMPLATE_PATH}")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
+def _fmt_int(value):
+    return f"{int(value):,}".replace(",", ".")
+
+
+def _fmt_pct(value):
+    return f"{float(value):.1f}".replace(".", ",")
+
+
+def _load_corpus_stats():
+    stats = {
+        "n_total": 0,
+        "year_min": 1995,
+        "year_max": 2025,
+        "n_judicial": 0,
+        "pct_judicial": 0.0,
+        "n_journals": 0,
+        "n_sources": 0,
+        "sources": "Scopus",
+        "post_2010": 0,
+        "pct_post_2010": 0.0,
+        "raw_total": 0,
+        "dedup_total": 0,
+        "by_corpus": Counter(),
+        "country_note": (
+            "metadados de país de afiliação não estavam disponíveis na "
+            "extração Scopus usada nesta versão"
+        ),
+    }
+
+    if os.path.exists(CORPUS_ELIGIBLE_CSV):
+        with open(CORPUS_ELIGIBLE_CSV, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+
+        stats["n_total"] = len(rows)
+        years = [
+            int(r["year"]) for r in rows
+            if r.get("year") and r["year"].strip().isdigit()
+        ]
+        if years:
+            stats["year_min"] = min(years)
+            stats["year_max"] = max(years)
+            stats["post_2010"] = sum(1 for y in years if 2010 <= y <= 2025)
+            stats["pct_post_2010"] = (
+                stats["post_2010"] / len(years) * 100 if years else 0.0
+            )
+
+        stats["by_corpus"] = Counter(r.get("corpus_id", "") for r in rows)
+        stats["n_judicial"] = stats["by_corpus"].get("C", 0)
+        stats["pct_judicial"] = (
+            stats["n_judicial"] / stats["n_total"] * 100
+            if stats["n_total"] else 0.0
+        )
+        stats["n_journals"] = len({
+            r.get("journal", "").strip()
+            for r in rows
+            if r.get("journal", "").strip()
+        })
+        sources = sorted({
+            r.get("source_db", "").strip()
+            for r in rows
+            if r.get("source_db", "").strip()
+        })
+        stats["n_sources"] = len(sources)
+        stats["sources"] = ", ".join(sources) if sources else "Scopus"
+
+    if os.path.exists(DEDUP_REPORT_CSV):
+        with open(DEDUP_REPORT_CSV, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        stats["raw_total"] = sum(int(float(r.get("n_raw", 0) or 0)) for r in rows)
+        stats["dedup_total"] = sum(int(float(r.get("n_dedup", 0) or 0)) for r in rows)
+
+    return stats
+
+
+STATS = _load_corpus_stats()
 
 
 # ===========================================================================
@@ -61,11 +142,13 @@ AFILIACAO = (
 
 # Máximo 500 caracteres incluindo espaços
 RESUMO = (
-    "Mapeamento bibliométrico global (1995–2025) da educação corporativa "
-    "pública e judiciária em cinco bases internacionais. Identifica três "
-    "subcampos com baixa integração e gap expressivo da educação judicial. "
-    "Propõe o Índice IMECPJ para benchmark entre escolas. Subsidia inovação "
-    "pedagógica e curricular para a ENAJU e demais escolas de formação judicial."
+    f"Mapeamento bibliométrico (1995–2025) de "
+    f"{_fmt_int(STATS['n_total'])} registros Scopus sobre educação corporativa "
+    f"pública e judiciária. O Corpus C reúne "
+    f"{_fmt_int(STATS['n_judicial'])} estudos "
+    f"({_fmt_pct(STATS['pct_judicial'])}%). Identifica baixa integração entre "
+    f"subcampos e propõe o IMECPJ como protótipo de benchmark para inovação "
+    f"pedagógica em escolas judiciais."
 )
 
 # Máximo 5 palavras-chave
@@ -115,6 +198,18 @@ INTRODUCAO = [
         "avanço normativo para a formação por competências no setor público, "
         "mas a base empírica que poderia orientar essa política permanece "
         "subutilizada pelas instituições formadoras."
+    ),
+    (
+        "No Poder Judiciário, essa agenda é reforçada por políticas digitais "
+        "do Conselho Nacional de Justiça. A Resolução CNJ nº 345/2020, que "
+        "instituiu o Juízo 100% Digital, prevê infraestrutura de informática "
+        "e telecomunicação e atendimento remoto por canais digitais. A "
+        "Resolução CNJ nº 385/2021, ao dispor sobre os Núcleos de Justiça "
+        "4.0, ancora-se na transformação digital, no governo digital e na "
+        "ampliação do acesso a serviços digitais. Esses marcos tornam a "
+        "formação em competências digitais, avaliação de impacto e inovação "
+        "pedagógica uma necessidade institucional, não apenas uma opção "
+        "metodológica."
     ),
     (
         "Este artigo tem como objetivo mapear sistematicamente a produção "
@@ -206,13 +301,12 @@ MATERIAL_METODOS = [
         "O corpus foi construído a partir de quatro grupos de descritores — "
         "educação corporativa privada (Corpus A), capacitação no setor público "
         "(Corpus B), educação judicial (Corpus C) e inovação tecnológica "
-        "educacional (Corpus D) —, coletados em cinco bases de dados: Scopus, "
-        "OpenAlex, Crossref, Semantic Scholar e SciELO. A seleção obedeceu ao "
-        "critério de complementaridade: Scopus e OpenAlex para literatura "
-        "internacional indexada; Crossref para cobertura ampla de DOIs; "
-        "Semantic Scholar para ciência da computação; e SciELO para a "
-        "produção ibero-americana, que frequentemente não aparece nas bases "
-        "internacionais."
+        "educacional (Corpus D). O pipeline foi desenhado para integrar "
+        "Scopus, OpenAlex, Crossref, Semantic Scholar e SciELO; nesta versão "
+        f"submetida, os resultados empíricos consolidados usam "
+        f"{_fmt_int(STATS['n_total'])} registros elegíveis da Scopus, "
+        "base escolhida por sua cobertura internacional, controle de "
+        "metadados e compatibilidade com análises bibliométricas."
     ),
     (
         "Foram incluídos artigos científicos com revisão por pares, livros e "
@@ -257,22 +351,26 @@ RD_SUBSECS = [
         "heading": "Perfil geral do corpus e crescimento da produção",
         "paras": [
             (
-                "O corpus final consolidado compreende N/D registros únicos "
-                "após deduplicação, distribuídos por N/D periódicos distintos "
-                "e N/D países de origem do primeiro autor. O crescimento "
-                "acumulado é acentuado: artigos publicados a partir de 2010 "
-                "representam mais de 70% do corpus total (Figura 1), "
-                "indicando campo em expansão acelerada e oportunidade real "
-                "para escolas judiciais atualizarem continuamente seus "
-                "referenciais pedagógicos."
+                f"A busca identificou {_fmt_int(STATS['raw_total'])} registros "
+                f"brutos. Após deduplicação, permaneceram "
+                f"{_fmt_int(STATS['dedup_total'])} registros únicos; depois "
+                f"da aplicação do recorte 1995–2025, o corpus analítico final "
+                f"compreende {_fmt_int(STATS['n_total'])} registros elegíveis, "
+                f"distribuídos por {_fmt_int(STATS['n_journals'])} periódicos "
+                f"distintos. Artigos publicados de 2010 a 2025 representam "
+                f"{_fmt_int(STATS['post_2010'])} registros "
+                f"({_fmt_pct(STATS['pct_post_2010'])}% do corpus), indicando "
+                "campo em expansão acelerada e oportunidade real para escolas "
+                "judiciais atualizarem continuamente seus referenciais "
+                "pedagógicos."
             ),
             (
                 "A distribuição entre os corpora revela assimetria estrutural: "
                 "o Corpus A (educação corporativa privada) domina a produção, "
                 "seguido pelo Corpus B (setor público). O Corpus C (educação "
-                "judiciária), com N/D registros (N/D% do total), apresenta "
-                "crescimento tardio e volume substancialmente inferior aos "
-                "demais."
+                f"judiciária), com {_fmt_int(STATS['n_judicial'])} registros "
+                f"({_fmt_pct(STATS['pct_judicial'])}% do total), apresenta "
+                "volume substancialmente inferior aos demais."
             ),
             (
                 "Implicação pedagógica 1: A sub-representação da educação "
@@ -289,13 +387,13 @@ RD_SUBSECS = [
         "heading": "Estrutura geográfica: implicações para cooperação formativa",
         "paras": [
             (
-                "Os países anglófonos dominam a produção: Estados Unidos, "
-                "Reino Unido e Austrália concentram aproximadamente metade de "
-                "todos os registros (Figura 2). O Brasil aparece como o "
-                "principal país de língua portuguesa e o mais produtivo da "
-                "América Latina no corpus, embora com produção ainda "
-                "concentrada no Corpus B (administração pública) e incipiente "
-                "no Corpus C."
+                "A etapa geográfica deve ser lida como dimensão a completar "
+                "na próxima rodada de coleta: os metadados de país de "
+                "afiliação não estavam disponíveis na extração Scopus "
+                "consolidada nesta versão. Por isso, o artigo preserva a "
+                "análise temporal, temática e de periódicos, mas trata a "
+                "comparação entre países como extensão metodológica a ser "
+                "enriquecida com OpenAlex, SciELO e metadados institucionais."
             ),
             (
                 "Implicação pedagógica 2: As instituições mais produtivas nos "
@@ -425,19 +523,22 @@ RD_SUBSECS = [
                 "governança (D1), produção de conhecimento (D2), avaliação e "
                 "evidências (D3), inovação educacional (D4), cooperação em "
                 "rede (D5), infraestrutura tecnológica (D6) e impacto "
-                "institucional (D7). O IMECPJ foi aplicado a quinze países "
-                "com dados bibliométricos e institucionais disponíveis."
+                "institucional (D7). Operacionalmente, o índice é calculado "
+                "como média ponderada das sete dimensões normalizadas em "
+                "escala de 0 a 10: IMECPJ = Σ(Di × wi), com pesos "
+                "exploratórios definidos por relevância institucional. O instrumento deve ser lido como "
+                "protótipo analítico operacionalizável, e não como ranking "
+                "definitivo de maturidade."
             ),
             (
-                "O Brasil apresenta hiatos mais pronunciados nas dimensões de "
-                "avaliação e evidências (D3) e inovação educacional (D4), "
-                "relativa às médias dos países mais avançados, com escores "
-                "intermediários em governança (D1) e cooperação em rede (D5), "
-                "refletindo avanços institucionais recentes. Esses resultados "
-                "são estimativas baseadas em proxies bibliométricos e "
-                "mapeamento institucional, sujeitas a validação empírica "
-                "por questionários estruturados junto a gestores de escolas "
-                "de formação."
+                "Para o Brasil, a hipótese de trabalho é que os principais "
+                "hiatos se concentrem em avaliação e evidências (D3) e "
+                "inovação educacional (D4), com avanço relativo em governança "
+                "(D1) e cooperação em rede (D5). Esses resultados são "
+                "estimativas baseadas em proxies bibliométricos e mapeamento "
+                "institucional, sujeitas a validação empírica por "
+                "questionários estruturados junto a gestores de escolas de "
+                "formação."
             ),
             (
                 "O IMECPJ é um instrumento pedagógico-institucional: ao "
@@ -512,7 +613,7 @@ CONCLUSAO = [
         "pedagógica em formação judicial: (a) mapeia sistematicamente a "
         "estrutura do campo com técnicas bibliométricas complementares, "
         "oferecendo à ENAJU e demais escolas judiciais um painel de estado do "
-        "conhecimento; (b) demonstra empiricamente o gap da educação "
+        "conhecimento; (b) quantifica, nesta versão exploratória, o gap da educação "
         "judiciária na produção científica global, apontando oportunidade de "
         "alta originalidade para pesquisadores e gestores educacionais do "
         "Judiciário; e (c) propõe o IMECPJ como instrumento de benchmark "

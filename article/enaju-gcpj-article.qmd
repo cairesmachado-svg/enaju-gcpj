@@ -67,16 +67,20 @@ safe_fig <- function(...) {
 }
 
 # Estatísticas para uso no texto
-n_total    <- if (!is.null(corpus)) nrow(corpus) else "N/D"
-n_judicial <- if (!is.null(corpus)) corpus %>% filter(corpus_id=="C") %>% nrow() else "N/D"
-year_min   <- if (!is.null(corpus)) min(corpus$year, na.rm=TRUE) else 1995
-year_max   <- if (!is.null(corpus)) max(corpus$year, na.rm=TRUE) else 2025
-pct_c      <- if (!is.null(corpus) && is.numeric(n_judicial)) round(n_judicial/n_total*100, 1) else "N/D"
+n_total    <- if (!is.null(corpus)) nrow(corpus) else 0L
+n_judicial <- if (!is.null(corpus)) corpus %>% filter(corpus_id=="C") %>% nrow() else 0L
+year_min   <- if (!is.null(corpus) && n_total > 0) min(corpus$year, na.rm=TRUE) else 1995
+year_max   <- if (!is.null(corpus) && n_total > 0) max(corpus$year, na.rm=TRUE) else 2025
+pct_c      <- if (n_total > 0) round(n_judicial/n_total*100, 1) else 0
+n_post2010 <- if (!is.null(corpus)) sum(corpus$year >= 2010 & corpus$year <= 2025, na.rm=TRUE) else 0L
+pct_post2010 <- if (n_total > 0) round(n_post2010/n_total*100, 1) else 0
+n_raw_total <- if (!is.null(dedup_report)) sum(dedup_report$n_raw, na.rm=TRUE) else 0L
+n_dedup_total <- if (!is.null(dedup_report)) sum(dedup_report$n_dedup, na.rm=TRUE) else 0L
 ```
 
 ## Resumo {.unnumbered}
 
-Este artigo apresenta um mapeamento bibliométrico global da produção científica sobre educação corporativa pública e judiciária, cobrindo o período de `r year_min` a `r year_max`. A partir de `r format(n_total, big.mark=".")` registros coletados em cinco bases de dados internacionais — Scopus, OpenAlex, Crossref, Semantic Scholar e SciELO —, o estudo identifica a estrutura, a fragmentação e as fronteiras de um campo que ainda não se consolidou como disciplina científica autônoma. A análise mobiliza quatro técnicas bibliométricas complementares: análise descritiva, cocitação de referências, acoplamento bibliográfico e modelagem de tópicos. Os resultados revelam três subcampos que coexistem com baixa integração teórica e metodológica — educação corporativa privada, capacitação no setor público e formação judicial —, além de um quarto subcampo emergente centrado em inovação tecnológica educacional. A educação judiciária, em particular, representa apenas `r pct_c`% da produção total, revelando um gap significativo em relação à relevância institucional do Poder Judiciário como organização formadora. Com base nos achados, propõe-se o Índice de Maturidade da Educação Corporativa Pública e Judiciária (IMECPJ), instrumento composto por sete dimensões, aplicado comparativamente a quinze países. O artigo conclui com uma agenda de pesquisa voltada ao fortalecimento de escolas de formação como organizações produtoras e gestoras de conhecimento institucional.
+Este artigo apresenta um mapeamento bibliométrico da produção científica sobre educação corporativa pública e judiciária, cobrindo o período de `r year_min` a `r year_max`. A partir de `r format(n_total, big.mark=".")` registros elegíveis da Scopus, o estudo identifica a estrutura, a fragmentação e as fronteiras de um campo que ainda não se consolidou como disciplina científica autônoma. A análise mobiliza camadas bibliométricas complementares, com ênfase em análise descritiva, estrutura temporal, periódicos nucleares e distribuição por corpus temático. Os resultados revelam assimetria entre educação corporativa privada, capacitação no setor público, formação judicial e inovação tecnológica educacional. A educação judiciária, em particular, representa `r pct_c`% da produção total (`r format(n_judicial, big.mark=".")` registros), revelando um gap significativo em relação à relevância institucional do Poder Judiciário como organização formadora. Com base nos achados, propõe-se o Índice de Maturidade da Educação Corporativa Pública e Judiciária (IMECPJ) como protótipo analítico operacionalizável. O artigo conclui com uma agenda de pesquisa voltada ao fortalecimento de escolas de formação como organizações produtoras e gestoras de conhecimento institucional.
 
 **Palavras-chave:** educação corporativa pública; formação judiciária; bibliometria; desenvolvimento de capacidades; políticas de formação.
 
@@ -84,7 +88,7 @@ Este artigo apresenta um mapeamento bibliométrico global da produção científ
 
 **Abstract**
 
-This article presents a global bibliometric mapping of scientific production on public and judicial corporate education, covering the period from `r year_min` to `r year_max`. Drawing on `r format(n_total, big.mark=",")` records collected from five international databases — Scopus, OpenAlex, Crossref, Semantic Scholar, and SciELO —, the study identifies the structure, fragmentation, and boundaries of a field that has not yet consolidated as an autonomous scientific discipline. The analysis employs four complementary bibliometric techniques: descriptive analysis, reference co-citation, bibliographic coupling, and topic modeling. Results reveal three subfields that coexist with low theoretical and methodological integration — private corporate education, public sector capacity building, and judicial education —, alongside an emerging fourth subfield centered on educational technology innovation. Judicial education, in particular, accounts for only `r pct_c`% of total production, revealing a significant gap relative to the institutional relevance of the judiciary as a training organization. Based on these findings, the Judicial Public Corporate Education Maturity Index (IMECPJ) is proposed — a seven-dimension composite instrument applied comparatively across fifteen countries. The article concludes with a research agenda oriented toward strengthening training schools as organizations that produce and manage institutional knowledge.
+This article presents a bibliometric mapping of scientific production on public and judicial corporate education, covering the period from `r year_min` to `r year_max`. Drawing on `r format(n_total, big.mark=",")` eligible Scopus records, the study identifies the structure, fragmentation, and boundaries of a field that has not yet consolidated as an autonomous scientific discipline. The analysis emphasizes descriptive bibliometrics, temporal structure, core journals, and thematic corpus distribution. Results reveal asymmetry among private corporate education, public sector capacity building, judicial education, and educational technology innovation. Judicial education accounts for `r pct_c`% of total production (`r format(n_judicial, big.mark=",")` records), revealing a significant gap relative to the institutional relevance of the judiciary as a training organization. Based on these findings, the Judicial Public Corporate Education Maturity Index (IMECPJ) is proposed as an operationalizable analytical prototype. The article concludes with a research agenda oriented toward strengthening training schools as organizations that produce and manage institutional knowledge.
 
 **Keywords:** public corporate education; judicial training; bibliometrics; capacity development; training policies.
 
@@ -116,6 +120,8 @@ Na literatura de administração pública, o desenvolvimento de capacidades (*ca
 
 No Brasil, esse debate ganha contornos próprios. A administração pública federal tem investido na estruturação de escolas de governo e políticas de formação continuada, com destaque para a Política Nacional de Desenvolvimento de Pessoas (PNDP), regulamentada pelo Decreto nº 9.991/2019, que estabeleceu um marco normativo articulado de formação por competências.
 
+No Poder Judiciário, a agenda de inovação pedagógica se conecta diretamente às políticas digitais do Conselho Nacional de Justiça. A Resolução CNJ nº 345/2020, que instituiu o Juízo 100% Digital, prevê infraestrutura de informática e telecomunicação e atendimento remoto por canais digitais. A Resolução CNJ nº 385/2021, ao dispor sobre os Núcleos de Justiça 4.0, ancora-se na transformação digital, no governo digital e na ampliação do acesso a serviços digitais. Esses marcos tornam a formação em competências digitais, avaliação de impacto e inovação pedagógica uma necessidade institucional, não apenas uma opção metodológica.
+
 ### Educação judiciária e administração da justiça
 
 A formação de magistrados e servidores do Poder Judiciário constitui subcampo específico, articulado ao estado de direito, à independência judicial e à prestação jurisdicional de qualidade [@geyh2006judicial; @damaška1986faces]. Organismos internacionais como a IOJT (*International Organization for Judicial Training*) e a EJTN (*European Judicial Training Network*) têm atuado para sistematizar práticas de formação judicial comparada e promover cooperação entre escolas [@iojt2022report].
@@ -136,7 +142,7 @@ O protocolo de busca, inclusão e exclusão foi construído com base nas diretri
 
 ### Corpus e bases de dados
 
-O corpus foi construído a partir de quatro grupos de descritores (Quadro 1), coletados em cinco bases de dados complementares: Scopus, OpenAlex, Crossref, Semantic Scholar e SciELO.
+O corpus foi construído a partir de quatro grupos de descritores (Quadro 1). O pipeline foi desenhado para integrar cinco bases complementares — Scopus, OpenAlex, Crossref, Semantic Scholar e SciELO —, mas os resultados empíricos consolidados nesta versão usam a extração Scopus, selecionada por sua cobertura internacional, controle de metadados e compatibilidade com análise bibliométrica.
 
 ```{r tab-corpus-queries}
 #| label: tbl-queries
@@ -162,7 +168,7 @@ tibble::tribble(
   else tbl)()
 ```
 
-A seleção das bases obedeceu ao critério de complementaridade: Scopus e OpenAlex para literatura internacional indexada; Crossref para metadados de DOI com cobertura ampla; Semantic Scholar para capturar literatura em ciência da computação e aprendizagem de máquina; e SciELO para a produção ibero-americana, que frequentemente não aparece nas bases internacionais.
+A seleção das bases no desenho metodológico obedeceu ao critério de complementaridade: Scopus e OpenAlex para literatura internacional indexada; Crossref para metadados de DOI com cobertura ampla; Semantic Scholar para capturar literatura em ciência da computação e aprendizagem de máquina; e SciELO para a produção ibero-americana, que frequentemente não aparece nas bases internacionais. A integração das demais bases permanece como etapa de robustez e atualização do estudo.
 
 ### Critérios de inclusão e exclusão
 
@@ -213,13 +219,46 @@ if (!is.null(corpus)) {
   n_countries <- length(unique(corpus$country[!is.na(corpus$country)]))
   median_cit  <- median(as.numeric(corpus$citations), na.rm=TRUE)
 } else {
-  n_sources <- n_journals <- n_countries <- median_cit <- "N/D"
+  n_sources <- n_journals <- n_countries <- median_cit <- 0
 }
 ```
 
-O corpus final consolidado compreende `r format(n_total, big.mark=".")` registros únicos após deduplicação, cobrindo o período de `r year_min` a `r year_max`, com registros provenientes de `r n_sources` bases de dados. Os documentos distribuem-se por `r n_journals` periódicos distintos e `r n_countries` países de origem do primeiro autor.
+O processo de busca identificou `r format(n_raw_total, big.mark=".")` registros brutos. Após deduplicação, permaneceram `r format(n_dedup_total, big.mark=".")` registros únicos; com a aplicação do recorte 1995–2025, o corpus analítico final compreende `r format(n_total, big.mark=".")` registros elegíveis, provenientes de `r n_sources` base de dados (`r paste(sort(unique(corpus$source_db)), collapse=", ")`). Os documentos distribuem-se por `r format(n_journals, big.mark=".")` periódicos distintos. A extração Scopus utilizada nesta versão não contém metadados consolidados de país de afiliação, razão pela qual a análise geográfica é tratada como etapa de enriquecimento futuro.
 
-O crescimento da produção científica acumulada é acentuado: artigos publicados a partir de 2010 representam mais de 70% do corpus total, indicando campo em expansão acelerada. A mediana de citações é `r median_cit`, com distribuição altamente assimétrica, padrão esperado em campos emergentes [@lotka1926frequency].
+O crescimento da produção científica acumulada é acentuado: artigos publicados de 2010 a 2025 representam `r format(n_post2010, big.mark=".")` registros (`r pct_post2010`% do corpus total), indicando campo em expansão acelerada. A mediana de citações é `r median_cit`, com distribuição altamente assimétrica, padrão esperado em campos emergentes [@lotka1926frequency].
+
+```{r tab-corpus-final}
+#| label: tbl-corpus-final
+#| tbl-cap: "Tabela 1 — Corpus final por grupo temático"
+
+if (!is.null(corpus) && !is.null(dedup_report)) {
+  corpus_summary <- corpus |>
+    dplyr::count(corpus_id, name = "n_elegivel") |>
+    dplyr::left_join(dedup_report |> dplyr::select(corpus, n_raw, n_dedup),
+                     by = c("corpus_id" = "corpus")) |>
+    dplyr::mutate(
+      pct_total = round(n_elegivel / sum(n_elegivel) * 100, 1),
+      corpus_label = dplyr::case_when(
+        corpus_id == "A" ~ "Educação corporativa e aprendizagem organizacional",
+        corpus_id == "B" ~ "Setor público e desenvolvimento de capacidades",
+        corpus_id == "C" ~ "Educação judiciária",
+        corpus_id == "D" ~ "Inovação, tecnologia e avaliação educacional",
+        TRUE ~ corpus_id
+      )
+    ) |>
+    dplyr::select(Corpus = corpus_id, `Campo temático` = corpus_label,
+                  `Registros brutos` = n_raw,
+                  `Após deduplicação` = n_dedup,
+                  `Elegíveis 1995–2025` = n_elegivel,
+                  `% do corpus final` = pct_total)
+
+  corpus_summary |>
+    knitr::kable(booktabs = TRUE, align = "llrrrr") |>
+    (\(tbl) if (knitr::is_html_output())
+      tbl |> kableExtra::kable_styling(full_width = TRUE, font_size = 10)
+    else tbl)()
+}
+```
 
 ```{r fig-annual}
 #| label: fig-annual
@@ -241,7 +280,7 @@ A Figura 2 revela assimetria estrutural entre os corpora: o Corpus A (educação
 safe_fig("data","outputs","figures","fig04_top_countries.png")
 ```
 
-Os países anglófonos dominam a produção: Estados Unidos, Reino Unido e Austrália concentram aproximadamente metade de todos os registros (Figura 3). O Brasil aparece como o principal país de língua portuguesa e o mais produtivo da América Latina no corpus, embora com produção ainda concentrada no Corpus B (administração pública) e incipiente no Corpus C.
+A extração Scopus consolidada nesta versão não trouxe país de afiliação do primeiro autor. Por isso, a Figura 3 deve ser tratada como componente a ser atualizado após enriquecimento dos metadados por OpenAlex/SciELO ou por consulta institucional. Nesta versão, a análise geográfica não é usada para sustentar conclusões substantivas; a evidência central repousa na distribuição temporal, temática e por periódicos.
 
 ### Periódicos nucleares e Lei de Bradford
 
@@ -249,7 +288,7 @@ A análise de Bradford evidencia dispersão acentuada: em todos os corpora, uma 
 
 ```{r tab-top-journals}
 #| label: tbl-journals
-#| tbl-cap: "Tabela 1 — Top 15 periódicos por volume de publicação"
+#| tbl-cap: "Tabela 2 — Top 15 periódicos por volume de publicação"
 
 if (!is.null(top_journals)) {
   top_journals |>
@@ -355,7 +394,7 @@ A análise de acoplamento e o mapa temático identificam quatro temas com potenc
 
 ## O Índice IMECPJ: proposta de instrumento comparativo
 
-Com base nos achados, propõe-se o **Índice de Maturidade da Educação Corporativa Pública e Judiciária (IMECPJ)**, instrumento de benchmark composto por sete dimensões (Quadro 3).
+Com base nos achados, propõe-se o **Índice de Maturidade da Educação Corporativa Pública e Judiciária (IMECPJ)** como protótipo analítico operacionalizável. O índice é composto por sete dimensões (Quadro 3), normalizadas em escala de 0 a 10 e agregadas por média ponderada: **IMECPJ = Σ(Di × wi)**. Os pesos desta versão exploratória são definidos no Quadro 3 e devem ser recalibrados em validações empíricas com gestores de escolas judiciais.
 
 ```{r tab-dimensions}
 #| label: tbl-dimensions
@@ -381,7 +420,7 @@ if (!is.null(dimensions)) {
 }
 ```
 
-O IMECPJ foi aplicado a quinze países com dados bibliométricos e institucionais suficientes. Os resultados são apresentados no ranking da Figura 9 e no mapa de calor dimensional da Figura 10.
+Os resultados do IMECPJ devem ser lidos como estimativas exploratórias, baseadas em proxies bibliométricos e mapeamento institucional, e não como ranking definitivo de maturidade. A aplicação comparativa é apresentada no ranking da Figura 9 e no mapa de calor dimensional da Figura 10 quando os dados institucionais processados estão disponíveis.
 
 ```{r fig-ranking}
 #| label: fig-ranking
@@ -416,7 +455,7 @@ A Figura 11 revela que o Brasil apresenta hiatos mais pronunciados nas dimensõe
 
 Este artigo demonstra que a educação corporativa pública e judiciária é um campo científico emergente e fragmentado, não um território unificado. Três subcampos coexistem com baixa integração: a tradição da aprendizagem corporativa e do HRD; a tradição da capacitação no setor público; e a tradição da educação judicial. Um quarto subcampo, centrado em inovação tecnológica educacional, emerge de forma transversal.
 
-A contribuição central do artigo é tripla: mapeia sistematicamente a estrutura do campo com técnicas bibliométricas complementares; demonstra empiricamente o gap da educação judiciária na produção científica global; e propõe o IMECPJ como instrumento de benchmark para escolas de formação.
+A contribuição central do artigo é tripla: mapeia sistematicamente a estrutura do campo com técnicas bibliométricas complementares; quantifica, nesta versão exploratória, o gap da educação judiciária na produção científica global; e propõe o IMECPJ como instrumento de benchmark para escolas de formação.
 
 Para a agenda de pesquisa, os achados apontam quatro prioridades: desenvolvimento de avaliações de impacto com design quasi-experimental para programas de formação no setor público; estudos de caso comparados sobre o uso de learning analytics em escolas de governo e judiciais; mapeamento sistemático da literatura cinzenta produzida por escolas judiciais e organismos internacionais; e validação empírica do IMECPJ em amostras mais amplas.
 

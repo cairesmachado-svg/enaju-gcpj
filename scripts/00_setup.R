@@ -52,7 +52,7 @@ packages_analysis <- c("tidyverse", "stringdist", "lubridate", "writexl", "janit
                        "RColorBrewer", "wordcloud2", "treemapify",
                        "knitr", "kableExtra", "gt", "flextable",
                        "officer", "officedown",
-                       "glue", "furrr", "fmsb", "maps")
+                       "glue", "furrr", "fmsb", "maps", "countrycode")
 
 # A fase é controlada pela variável de ambiente ENAJU_PHASE
 # (collection|analysis|all). Default = "all" para compatibilidade.
