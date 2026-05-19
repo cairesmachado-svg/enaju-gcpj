@@ -109,7 +109,7 @@ rap_ref <- tryCatch(
 # 3. Renderizar o artigo Quarto
 # -----------------------------------------------------------------------------
 
-article_qmd <- here::here("article", "enaju-gcpj-article.qmd")
+article_qmd <- here::here("manuscripts", "enaju-gcpj-article.qmd")
 
 if (!file.exists(article_qmd)) {
   stop("[ERRO] Arquivo do artigo não encontrado:", article_qmd)
@@ -177,4 +177,4 @@ cat("Figuras geradas:", n_figs, "\n")
 cat("Tabelas geradas:", n_tabs, "\n")
 
 log_step("Pipeline completo finalizado", "99_render")
-cat("\nArtigo disponível em: article/enaju-gcpj-article.{html,docx}\n")
+cat("\nArtigo disponível em: outputs/enaju-gcpj-article.{html,docx}\n")

@@ -40,8 +40,8 @@ Thumbs.db
 
 # Outputs de renderização intermediários
 article/*.html
-article/enaju-gcpj-article_files/
-_output/
+manuscripts/enaju-gcpj-article_files/
+outputs/
 
 # macOS
 .DS_Store

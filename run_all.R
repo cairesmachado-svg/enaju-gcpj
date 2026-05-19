@@ -172,7 +172,7 @@ cat(sprintf("\nTotal: %d/%d scripts concluídos com sucesso | Tempo total: %.0f 
 
 if (n_fail == 0) {
   cat("\nPipeline finalizado com sucesso.\n")
-  cat("Artigo disponível em: article/enaju-gcpj-article.{html,docx}\n")
+  cat("Artigo disponível em: manuscripts/enaju-gcpj-article.{html,docx}\n")
 } else {
   cat(sprintf("\n%d script(s) com erro. Verifique as mensagens acima e reexecute com:\n", n_fail))
   failed_ids <- paste(results$step[results$status != "OK"], collapse = ",")

@@ -1,0 +1,31 @@
+institution,country,type,corpus,year_founded,network,url
+International Organization for Judicial Training (IOJT),International,rede_judicial,C,1999,IOJT,https://www.iojt.org
+European Judicial Training Network (EJTN),Europe,rede_judicial,C,2000,EJTN,https://www.ejtn.eu
+Ibero-American Judicial Schools Network (RIAEJ),Ibero-America,rede_judicial,C,1999,RIAEJ,NA
+OECD — Public Governance Directorate,International,org_intl,B,NA,OCDE,https://www.oecd.org
+Commonwealth Association for Public Administration (CAPAM),International,org_intl,B,1994,CAPAM,https://www.capam.org
+UN DESA — Division for Public Institutions,International,org_intl,B,NA,ONU,NA
+Corporate Executive Board / Gartner L&D,USA,corporativo,A,1983,privado,NA
+Federal Judicial Center (FJC),USA,escola_judicial,C,1967,NA,https://www.fjc.gov
+National Judicial College (NJC),USA,escola_judicial,C,1963,NA,https://www.judges.org
+Judicial College (UK),United Kingdom,escola_judicial,C,1979,EJTN,https://www.judiciary.gov.uk
+École Nationale de la Magistrature (ENM),France,escola_judicial,C,1958,EJTN,https://www.enm.justice.fr
+Deutsche Richterakademie,Germany,escola_judicial,C,1973,EJTN,NA
+National Judicial Academy (NJA),India,escola_judicial,C,1993,NA,https://www.nja.nic.in
+National Judicial Institute (NJI),Nigeria,escola_judicial,C,1997,NA,NA
+Australian Institute of Judicial Administration (AIJA),Australia,escola_judicial,C,1978,NA,https://www.aija.org.au
+Japan Judicial Research and Training Institute,Japan,escola_judicial,C,1947,NA,NA
+Escola Nacional de Formação e Aperfeiçoamento de Magistrados (ENFAM),Brazil,escola_judicial,C,2006,RIAEJ,https://www.enfam.jus.br
+École Nationale d'Administration (ENA/INSP),France,escola_governo,B,1945,NA,https://www.insp.gouv.fr
+Harvard Kennedy School of Government,USA,escola_governo,B,1936,NA,https://www.hks.harvard.edu
+Lee Kuan Yew School of Public Policy,Singapore,escola_governo,B,2004,NA,https://lkyspp.nus.edu.sg
+Australia and New Zealand School of Government (ANZSOG),Australia,escola_governo,B,2002,NA,https://anzsog.edu.au
+ENAP Brasil,Brazil,escola_governo,B,1986,NA,https://enap.gov.br
+IUPERJ / IESP-UERJ,Brazil,escola_governo,B,1969,NA,NA
+National School of Government (NSG),South Africa,escola_governo,B,2004,NA,NA
+Civil Service College (CSC),Singapore,escola_governo,B,1971,NA,https://www.csc.gov.sg
+Motorola University,USA,universidade_corporativa,A,1981,NA,NA
+Hamburger University (McDonald's),USA,universidade_corporativa,A,1961,NA,NA
+Disney Institute,USA,universidade_corporativa,A,1986,NA,https://disneyinstitute.com
+Petrobras University,Brazil,universidade_corporativa,A,1995,NA,NA
+Bradesco University,Brazil,universidade_corporativa,A,1956,NA,NA

@@ -136,7 +136,7 @@ find_project_root <- function(start = getwd()) {
   cur <- normalizePath(start, winslash = "/", mustWork = TRUE)
 
   markers <- c(
-    "article/enaju-gcpj-article.qmd",
+    "manuscripts/enaju-gcpj-article.qmd",
     "scripts/00_setup.R",
     "00_setup.R",
     ".git"
@@ -210,8 +210,8 @@ if (length(missing_scripts) > 0) {
   stopf("Scripts ausentes em scripts/: %s", paste(missing_scripts, collapse = ", "))
 }
 
-if (!file.exists(file.path(ROOT, "article", "enaju-gcpj-article.qmd"))) {
-  msg("Arquivo article/enaju-gcpj-article.qmd não encontrado. Renderização poderá falhar.", level = "AVISO")
+if (!file.exists(file.path(ROOT, "manuscripts", "enaju-gcpj-article.qmd"))) {
+  msg("Arquivo manuscripts/enaju-gcpj-article.qmd não encontrado. Renderização poderá falhar.", level = "AVISO")
 }
 
 if (!file.exists(file.path(ROOT, ".env"))) {
@@ -282,13 +282,13 @@ steps <- data.frame(
     "data/processed/corpus_full.rds",
     "data/processed/corpus_eligible.rds",
     "data/processed/bibliometrix_M.rds",
-    "data/outputs/networks/cocitation_author_network.rds",
-    "data/outputs/tables/tab10_keyword_clusters.csv",
-    "data/outputs/tables/tab11_coupling_clusters.csv",
+    "results/networks/cocitation_author_network.rds",
+    "results/tables/tab10_keyword_clusters.csv",
+    "results/tables/tab11_coupling_clusters.csv",
     "data/processed/lda_model.rds",
     "data/processed/institutions_db.rds",
     "data/processed/maturity_index.rds",
-    "data/outputs/enaju-gcpj-article.html"
+    "results/enaju-gcpj-article.html"
   ),
   stringsAsFactors = FALSE
 )

@@ -28,8 +28,8 @@ from docx.oxml.ns import qn
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
-TEMPLATE_PATH = os.path.join(ROOT_DIR, "template-tc-cobpit.docx")
-OUTPUT_DIR = os.path.join(ROOT_DIR, "_output", "article")
+TEMPLATE_PATH = os.path.join(ROOT_DIR, "manuscripts", "templates", "template-tc-cobpit.docx")
+OUTPUT_DIR = os.path.join(ROOT_DIR, "outputs")
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, "enaju-gcpj-cobpit-tc.docx")
 CORPUS_ELIGIBLE_CSV = os.path.join(ROOT_DIR, "data", "processed", "corpus_eligible.csv")
 DEDUP_REPORT_CSV = os.path.join(ROOT_DIR, "data", "processed", "dedup_report.csv")
@@ -135,8 +135,7 @@ AUTOR = (
 )
 
 AFILIACAO = (
-    "Conselho Nacional de Justiça / Escola Nacional de Formação e "
-    "Aperfeiçoamento de Magistrados (ENAJU), Brasília, DF, Brasil "
+    "Conselho Nacional de Justiça / Escola Nacional do Judiciário (ENAJU), Brasília, DF, Brasil "
     "(cairesmachado@gmail.com)"
 )
 
@@ -162,7 +161,7 @@ PALAVRAS_CHAVE = (
 # ---------------------------------------------------------------------------
 INTRODUCAO = [
     (
-        "A Escola Nacional de Formação e Aperfeiçoamento de Magistrados "
+        "A Escola Nacional do Judiciário "
         "(ENAJU) e demais escolas judiciais do Poder Judiciário brasileiro "
         "ocupam posição estratégica na formação continuada de magistrados e "
         "servidores: são simultaneamente instrumentos de política de pessoal, "
@@ -304,9 +303,12 @@ MATERIAL_METODOS = [
         "educacional (Corpus D). O pipeline foi desenhado para integrar "
         "Scopus, OpenAlex, Crossref, Semantic Scholar e SciELO; nesta versão "
         f"submetida, os resultados empíricos consolidados usam "
-        f"{_fmt_int(STATS['n_total'])} registros elegíveis da Scopus, "
-        "base escolhida por sua cobertura internacional, controle de "
-        "metadados e compatibilidade com análises bibliométricas."
+        f"{_fmt_int(STATS['n_total'])} registros elegíveis da Scopus. A "
+        "coleta foi realizada em maio de 2026, com classificação mutuamente "
+        "exclusiva entre corpora e deduplicação via DOI. O enriquecimento "
+        "geográfico utilizou a base OpenAlex. O pipeline usa otimização do "
+        "número de tópicos por métricas de coerência no LDA e parâmetros "
+        "mínimos de rede ajustados em bibliometrix e igraph."
     ),
     (
         "Os descritores de busca por corpus incluíram os seguintes operadores "
@@ -332,7 +334,7 @@ MATERIAL_METODOS = [
     (
         "O estudo é reprodutível: todos os scripts de coleta, processamento "
         "e análise foram desenvolvidos em R e estão disponíveis em repositório "
-        "público. Esse caráter de infraestrutura tecnológica aberta representa "
+        "público (https://github.com/cairesmachado-svg/enaju-gcpj). Esse caráter de infraestrutura tecnológica aberta representa "
         "contribuição metodológica per se: qualquer escola judicial ou "
         "instituição de ensino pode reutilizar o pipeline para atualizar "
         "continuamente o mapeamento e subsidiar decisões pedagógicas, "
@@ -382,8 +384,10 @@ RD_SUBSECS = [
                 "o Corpus A (educação corporativa privada) domina a produção, "
                 "seguido pelo Corpus B (setor público). O Corpus C (educação "
                 f"judiciária), com {_fmt_int(STATS['n_judicial'])} registros "
-                f"({_fmt_pct(STATS['pct_judicial'])}% do total), apresenta "
-                "volume substancialmente inferior aos demais."
+                f"({_fmt_pct(STATS['pct_judicial'])}% do total), não constitui "
+                "campo residual em volume, mas apresenta menor coesão de rede, "
+                "menor integração com os demais subcampos e baixa presença em "
+                "periódicos especializados em inovação e HRD."
             ),
             (
                 "Implicação pedagógica 1: A sub-representação da educação "
@@ -643,9 +647,10 @@ CONCLUSAO = [
         "alta originalidade para pesquisadores e gestores educacionais do "
         "Judiciário; e (c) propõe o IMECPJ como protótipo analítico de benchmark "
         "para identificar dimensões de maturidade e subsidiar planejamento "
-        "pedagógico e institucional — instrumento ainda em fase de validação "
-        "empírica, a ser calibrado por questionários estruturados junto a "
-        "gestores de escolas de formação."
+        "pedagógico e institucional. Ressalta-se que o IMECPJ não foi "
+        "aplicado empiricamente neste estudo; sua apresentação tem caráter "
+        "propositivo e deverá ser validada em etapa posterior por especialistas "
+        "e gestores de escolas judiciais."
     ),
     (
         "Para a agenda de pesquisa em educação judicial e inovação pedagógica, "
@@ -680,7 +685,7 @@ CONCLUSAO = [
 # ---------------------------------------------------------------------------
 AGRADECIMENTOS = (
     "Os autores agradecem ao Conselho Nacional de Justiça (CNJ) e à Escola "
-    "Nacional de Formação e Aperfeiçoamento de Magistrados (ENAJU) pelo "
+    "Nacional do Judiciário (ENAJU) pelo "
     "apoio institucional ao desenvolvimento desta pesquisa."
 )
 
