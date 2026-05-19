@@ -48,7 +48,9 @@ load_corpus_files <- function(corpus_id) {
                     "is_referenced_by_count", "citedby_count"),
       abstract = c("abstract", "ab_pt", "ab_en"),
       type = c("type", "publication_type", "subtype_description", "subtype",
-               "prism_aggregation_type")
+               "prism_aggregation_type"),
+      country = c("country", "country_first_author", "affiliation_country",
+                  "country_code", "dc_country")
     )
 
     for (target in names(col_map)) {

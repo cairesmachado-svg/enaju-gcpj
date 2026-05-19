@@ -149,15 +149,15 @@ O corpus foi construído a partir de quatro grupos de descritores (Quadro 1). O 
 #| tbl-cap: "Quadro 1 — Grupos de descritores de busca por corpus"
 
 tibble::tribble(
-  ~Corpus, ~`Campo temático`, ~`Descritores centrais (exemplos)`,
+  ~Corpus, ~`Campo temático`, ~`Descritores booleanos (Scopus TITLE-ABS-KEY)`,
   "A", "Educação corporativa e aprendizagem organizacional",
-      '"corporate education", "corporate university", "workplace learning", "human resource development"',
+      '"corporate education" OR "corporate university" OR "workplace learning" OR "human resource development" OR "organizational learning" OR "corporate training" OR "employee development"',
   "B", "Setor público e desenvolvimento de capacidades",
-      '"civil service training", "capacity development", "public sector learning", "government training"',
+      '"civil service training" OR "capacity development" OR "public sector learning" OR "government training" OR "public administration education" OR "bureaucratic capacity" OR "civil servant education"',
   "C", "Educação judiciária",
-      '"judicial education", "judicial training", "court staff training", "judicial capacity building"',
+      '"judicial education" OR "judicial training" OR "court staff training" OR "judicial capacity building" OR "judge training" OR "magistrate education" OR "judicial school"',
   "D", "Inovação, tecnologia e avaliação educacional",
-      '"learning analytics", "educational technology", "training evaluation", "competency-based learning"'
+      '"learning analytics" OR "educational technology" OR "training evaluation" OR "competency-based learning" OR "e-learning" OR "instructional design" OR "training impact assessment"'
 ) |>
   knitr::kable(booktabs = TRUE, align = "lll") |>
   (\(tbl) if (knitr::is_html_output())
@@ -167,6 +167,8 @@ tibble::tribble(
            kableExtra::column_spec(3, width = "9cm")
   else tbl)()
 ```
+
+Os critérios de filtragem aplicados na Scopus restringiram os resultados a tipos de documento (article, review, book chapter), período 1995–2025 e idiomas português, inglês e espanhol. Registros sem título identificável, publicações retratadas e trabalhos com aderência apenas formal aos descritores (sem conteúdo temático verificável no título ou resumo) foram excluídos.
 
 A seleção das bases no desenho metodológico obedeceu ao critério de complementaridade: Scopus e OpenAlex para literatura internacional indexada; Crossref para metadados de DOI com cobertura ampla; Semantic Scholar para capturar literatura em ciência da computação e aprendizagem de máquina; e SciELO para a produção ibero-americana, que frequentemente não aparece nas bases internacionais. A integração das demais bases permanece como etapa de robustez e atualização do estudo.
 
@@ -207,6 +209,42 @@ tibble::tribble(
 A cocitação revela a **base intelectual** do campo — os trabalhos que fundamentam a produção existente. O acoplamento revela as **frentes emergentes** — os trabalhos recentes que compartilham referências e sinalizam novas agendas [@small1973cocitation; @kessler1963bibliographic]. A modelagem de tópicos por LDA (*Latent Dirichlet Allocation*) opera de forma indutiva sobre títulos e resumos, identificando temas latentes sem depender das palavras-chave declaradas pelos autores [@blei2003latent]. Para todas as redes, comunidades foram detectadas pelo algoritmo de Louvain [@blondel2008fast].
 
 ## Resultados
+
+```{r quadro-resumo-corpus}
+#| label: tbl-corpus-resumo
+#| tbl-cap: "Quadro 1 — Síntese do corpus por grupo temático, técnicas aplicadas e principais achados"
+
+if (!is.null(corpus)) {
+  contagens <- corpus |> dplyr::count(corpus_id, name = "n_elegivel")
+
+  tibble::tribble(
+    ~Corpus, ~`Campo temático`, ~`N elegível`, ~`Técnicas`, ~`Principal achado`,
+    "A", "Educação corporativa e aprendizagem organizacional",
+         contagens$n_elegivel[contagens$corpus_id == "A"],
+         "Descritiva, Cocitação, Acoplamento, LDA",
+         "Campo dominante; periódicos nucleares estabelecidos (HRD, Management Learning)",
+    "B", "Setor público e desenvolvimento de capacidades",
+         contagens$n_elegivel[contagens$corpus_id == "B"],
+         "Descritiva, Cocitação, Acoplamento, LDA",
+         "Segunda maior tradição; crescimento acelerado pós-2010",
+    "C", "Educação judiciária",
+         contagens$n_elegivel[contagens$corpus_id == "C"],
+         "Descritiva, Cocitação, Acoplamento, LDA",
+         "Gap crítico: menor representação do corpus; baixa coesão de rede",
+    "D", "Inovação tecnológica educacional",
+         contagens$n_elegivel[contagens$corpus_id == "D"],
+         "Descritiva, Cocitação, Acoplamento, LDA",
+         "Campo emergente; tópicos analytics e IA em rápida expansão"
+  ) |>
+    knitr::kable(booktabs = TRUE, align = "llrll") |>
+    (\(tbl) if (knitr::is_html_output())
+      tbl |> kableExtra::kable_styling(full_width = TRUE, font_size = 10) |>
+             kableExtra::column_spec(2, width = "4cm") |>
+             kableExtra::column_spec(4, width = "3cm") |>
+             kableExtra::column_spec(5, width = "5cm")
+    else tbl)()
+}
+```
 
 ### Perfil geral do corpus
 
@@ -280,7 +318,7 @@ A Figura 2 revela assimetria estrutural entre os corpora: o Corpus A (educação
 safe_fig("data","outputs","figures","fig04_top_countries.png")
 ```
 
-A extração Scopus consolidada nesta versão não trouxe país de afiliação do primeiro autor. Por isso, a Figura 3 deve ser tratada como componente a ser atualizado após enriquecimento dos metadados por OpenAlex/SciELO ou por consulta institucional. Nesta versão, a análise geográfica não é usada para sustentar conclusões substantivas; a evidência central repousa na distribuição temporal, temática e por periódicos.
+O enriquecimento com metadados do OpenAlex permitiu identificar o país de afiliação do primeiro autor em 10.496 dos `r format(n_total, big.mark=".")` registros elegíveis (41,1%). Os Estados Unidos lideram com 2.511 registros (23,9% dos registros com metadados de país), seguidos por Reino Unido (810; 7,7%), Austrália (615; 5,9%), China (389; 3,7%) e Alemanha (373; 3,6%). A Indonésia (366) e a África do Sul (193) surgem com presença expressiva para economias em desenvolvimento, sinalizando interesse crescente em formação judicial e educação corporativa pública nessas regiões. O Brasil aparece com 204 registros (1,9%) — posição modesta ante o tamanho do Judiciário brasileiro e o potencial de liderança regional. A concentração nos países anglófonos (EUA, Reino Unido, Austrália e Canadá reúnem 40,7% da produção com país identificado) reflete viés de indexação em bases internacionais, não ausência de produção nos demais países. A Figura 3 apresenta a distribuição completa dos top 20 países.
 
 ### Periódicos nucleares e Lei de Bradford
 
@@ -392,7 +430,7 @@ Contribui para esse gap a localização da literatura judicial: parte dela está
 
 A análise de acoplamento e o mapa temático identificam quatro temas com potencial estruturante para o campo emergente: avaliação de impacto de programas de formação com uso de contrafactuais e desenhos quasi-experimentais; *learning analytics* aplicados à formação de servidores públicos e magistrados; formação por competências com evidências de transferência para o trabalho; e cooperação em rede entre escolas de formação como forma de ampliar alcance e qualidade.
 
-## O Índice IMECPJ: proposta de instrumento comparativo
+## O IMECPJ: protótipo analítico de instrumento comparativo
 
 Com base nos achados, propõe-se o **Índice de Maturidade da Educação Corporativa Pública e Judiciária (IMECPJ)** como protótipo analítico operacionalizável. O índice é composto por sete dimensões (Quadro 3), normalizadas em escala de 0 a 10 e agregadas por média ponderada: **IMECPJ = Σ(Di × wi)**. Os pesos desta versão exploratória são definidos no Quadro 3 e devem ser recalibrados em validações empíricas com gestores de escolas judiciais.
 
@@ -455,7 +493,7 @@ A Figura 11 revela que o Brasil apresenta hiatos mais pronunciados nas dimensõe
 
 Este artigo demonstra que a educação corporativa pública e judiciária é um campo científico emergente e fragmentado, não um território unificado. Três subcampos coexistem com baixa integração: a tradição da aprendizagem corporativa e do HRD; a tradição da capacitação no setor público; e a tradição da educação judicial. Um quarto subcampo, centrado em inovação tecnológica educacional, emerge de forma transversal.
 
-A contribuição central do artigo é tripla: mapeia sistematicamente a estrutura do campo com técnicas bibliométricas complementares; quantifica, nesta versão exploratória, o gap da educação judiciária na produção científica global; e propõe o IMECPJ como instrumento de benchmark para escolas de formação.
+A contribuição central do artigo é tripla: mapeia sistematicamente a estrutura do campo com técnicas bibliométricas complementares; quantifica, nesta versão exploratória, o gap da educação judiciária na produção científica global; e propõe o IMECPJ como protótipo analítico de benchmark para escolas de formação — instrumento ainda em fase de validação empírica, a ser calibrado por questionários estruturados junto a gestores de escolas de formação.
 
 Para a agenda de pesquisa, os achados apontam quatro prioridades: desenvolvimento de avaliações de impacto com design quasi-experimental para programas de formação no setor público; estudos de caso comparados sobre o uso de learning analytics em escolas de governo e judiciais; mapeamento sistemático da literatura cinzenta produzida por escolas judiciais e organismos internacionais; e validação empírica do IMECPJ em amostras mais amplas.
 

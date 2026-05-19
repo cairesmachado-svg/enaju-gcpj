@@ -309,6 +309,19 @@ MATERIAL_METODOS = [
         "metadados e compatibilidade com análises bibliométricas."
     ),
     (
+        "Os descritores de busca por corpus incluíram os seguintes operadores "
+        "booleanos representativos — Corpus A: \"corporate education\" OR "
+        "\"corporate university\" OR \"workplace learning\" OR \"human resource "
+        "development\"; Corpus B: \"civil service training\" OR \"capacity "
+        "development\" OR \"public sector learning\" OR \"government training\"; "
+        "Corpus C: \"judicial education\" OR \"judicial training\" OR \"court "
+        "staff training\" OR \"judicial capacity building\"; Corpus D: \"learning "
+        "analytics\" OR \"educational technology\" OR \"training evaluation\" OR "
+        "\"competency-based learning\". Os critérios de filtragem na Scopus "
+        "limitaram a tipos de documento (article, review, book chapter), "
+        "período 1995–2025 e idiomas português, inglês e espanhol."
+    ),
+    (
         "Foram incluídos artigos científicos com revisão por pares, livros e "
         "capítulos indexados, publicados entre 1995 e 2025, em português, "
         "inglês ou espanhol, que abordassem ao menos um dos corpora temáticos. "
@@ -387,24 +400,36 @@ RD_SUBSECS = [
         "heading": "Estrutura geográfica: implicações para cooperação formativa",
         "paras": [
             (
-                "A etapa geográfica deve ser lida como dimensão a completar "
-                "na próxima rodada de coleta: os metadados de país de "
-                "afiliação não estavam disponíveis na extração Scopus "
-                "consolidada nesta versão. Por isso, o artigo preserva a "
-                "análise temporal, temática e de periódicos, mas trata a "
-                "comparação entre países como extensão metodológica a ser "
-                "enriquecida com OpenAlex, SciELO e metadados institucionais."
+                "O enriquecimento com dados do OpenAlex permitiu identificar o "
+                "país de afiliação do primeiro autor em 10.496 dos 25.565 "
+                "registros elegíveis (41,1%). Os Estados Unidos lideram com "
+                "2.511 registros (23,9% dos registros com metadados de país), "
+                "seguidos pelo Reino Unido (810; 7,7%), Austrália (615; 5,9%), "
+                "China (389; 3,7%) e Alemanha (373; 3,6%). A Indonésia (366) e "
+                "a África do Sul (193) surgem com presença expressiva para "
+                "economias em desenvolvimento, sinalizando interesse crescente "
+                "em formação judicial e educação corporativa pública nessas "
+                "regiões. O Brasil aparece com 204 registros (1,9%) — posição "
+                "modesta ante o tamanho de seu Judiciário e o potencial de "
+                "liderança regional. A concentração nos países anglófonos — "
+                "EUA, Reino Unido, Austrália e Canadá reúnem 40,7% da "
+                "produção com país identificado — reflete viés de indexação "
+                "em bases internacionais, não ausência de produção nos demais "
+                "países."
             ),
             (
-                "Implicação pedagógica 2: As instituições mais produtivas nos "
-                "corpora B e C — universidades e escolas de governo de países "
-                "com sistemas judiciais consolidados — representam potenciais "
-                "parceiras para acordos de cooperação técnica, intercâmbio de "
-                "experiências formativas e cocriação de conteúdos. A análise "
-                "geográfica oferece um mapa de prioridades para a "
-                "internacionalização da formação judicial brasileira, "
-                "orientando inclusive a seleção de referências bibliográficas "
-                "para atualização de ementas."
+                "Implicação pedagógica 2: O domínio anglófono na literatura "
+                "indexada indica que escolas judiciais de países de direito "
+                "civil — como o Brasil — têm acesso limitado a estudos que "
+                "reflitam seus modelos institucionais. Isso reforça a "
+                "necessidade de a ENAJU investir em publicação científica em "
+                "português e espanhol, indexada em bases internacionais, e de "
+                "estabelecer acordos de cooperação prioritariamente com países "
+                "de tradição romanística (França, Espanha, Itália, Portugal) "
+                "e com redes ibero-americanas como a RIAEJ. As instituições "
+                "mais produtivas nos corpora B e C constituem mapa de "
+                "prioridades para acordos de cooperação técnica e cocriação "
+                "de conteúdos formativos baseados em evidências."
             ),
         ],
     },
@@ -512,7 +537,7 @@ RD_SUBSECS = [
     },
     {
         "heading": (
-            "O Índice IMECPJ: benchmark para planejamento pedagógico "
+            "O IMECPJ: protótipo analítico de benchmark pedagógico "
             "e institucional"
         ),
         "paras": [
@@ -616,9 +641,11 @@ CONCLUSAO = [
         "conhecimento; (b) quantifica, nesta versão exploratória, o gap da educação "
         "judiciária na produção científica global, apontando oportunidade de "
         "alta originalidade para pesquisadores e gestores educacionais do "
-        "Judiciário; e (c) propõe o IMECPJ como instrumento de benchmark "
+        "Judiciário; e (c) propõe o IMECPJ como protótipo analítico de benchmark "
         "para identificar dimensões de maturidade e subsidiar planejamento "
-        "pedagógico e institucional."
+        "pedagógico e institucional — instrumento ainda em fase de validação "
+        "empírica, a ser calibrado por questionários estruturados junto a "
+        "gestores de escolas de formação."
     ),
     (
         "Para a agenda de pesquisa em educação judicial e inovação pedagógica, "
@@ -910,6 +937,64 @@ def add_reference_para(doc, text):
     return p
 
 
+def add_summary_table(doc, stats):
+    """Quadro-resumo por corpus: campo, registros, técnicas e principal achado."""
+    from docx.oxml.ns import qn as _qn
+    from docx.oxml import OxmlElement
+
+    n = stats["by_corpus"]
+    n_a = _fmt_int(n.get("A", 0))
+    n_b = _fmt_int(n.get("B", 0))
+    n_c = _fmt_int(n.get("C", 0))
+    n_d = _fmt_int(n.get("D", 0))
+
+    tecnicas = "Descritiva, Cocitação, Acoplamento, LDA"
+
+    rows_data = [
+        ["Corpus", "Campo temático", "N elegível", "Técnicas", "Principal achado"],
+        ["A", "Educação corporativa e aprendizagem organizacional", n_a, tecnicas,
+         "Campo dominante; periódicos nucleares estabelecidos (HRD, Mgmt Learning)"],
+        ["B", "Setor público e desenvolvimento de capacidades", n_b, tecnicas,
+         "Segunda maior tradição; crescimento acelerado pós-2010"],
+        ["C", "Educação judiciária", n_c, tecnicas,
+         "Gap crítico: menor representação do corpus; menor coesão de rede"],
+        ["D", "Inovação tecnológica educacional", n_d, tecnicas,
+         "Campo emergente; tópicos analytics e IA em rápida expansão"],
+    ]
+
+    table = doc.add_table(rows=len(rows_data), cols=5)
+    table.style = "Table Grid"
+
+    col_widths_cm = [1.5, 5.5, 1.8, 3.5, 5.7]
+
+    for r_idx, row_data in enumerate(rows_data):
+        row = table.rows[r_idx]
+        for c_idx, cell_text in enumerate(row_data):
+            cell = row.cells[c_idx]
+            # Ajustar largura
+            tc = cell._tc
+            tcPr = tc.get_or_add_tcPr()
+            tcW = OxmlElement("w:tcW")
+            tcW.set(_qn("w:w"), str(int(col_widths_cm[c_idx] * 567)))
+            tcW.set(_qn("w:type"), "dxa")
+            tcPr.append(tcW)
+
+            p = cell.paragraphs[0]
+            p.paragraph_format.space_before = Pt(2)
+            p.paragraph_format.space_after = Pt(2)
+            run = p.add_run(cell_text)
+            run.font.size = Pt(9)
+            run.bold = (r_idx == 0)  # cabeçalho em negrito
+
+    # Parágrafo de legenda abaixo da tabela
+    p = doc.add_paragraph()
+    _set_fmt(p, align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+             space_before_pt=3, space_after_pt=6, line_spacing=1.0)
+    _run(p, "Quadro 1 — Síntese do corpus por grupo temático, técnicas aplicadas e principais achados.",
+         italic=True, size_pt=10)
+    return table
+
+
 # ===========================================================================
 # CONSTRUÇÃO DO DOCUMENTO
 # ===========================================================================
@@ -1007,6 +1092,8 @@ def build_document():
     # RESULTADOS E DISCUSSÃO
     # ------------------------------------------------------------------
     add_section_heading(doc, "RESULTADOS E DISCUSSÃO")
+    add_summary_table(doc, STATS)
+    add_empty(doc)
     for subsec in RD_SUBSECS:
         add_subsection_heading(doc, subsec["heading"])
         for para_text in subsec["paras"]:
@@ -1043,6 +1130,12 @@ def build_document():
     print("=" * 60)
     print(
         """
+0. ATENÇÃO MANUAL (antes de submeter aos anais)
+   - Abrir o DOCX gerado no Word e verificar se o cabeçalho ou
+     rodapé do template contém o link ou texto "ii-cobpit".
+   - Se encontrado, substituir manualmente por "iii-cobpit" em
+     todas as ocorrências, pois o artigo refere-se ao III COBPIT.
+
 1. TÍTULO
    - Reescrito para enfatizar \"educação judicial\" e \"inovação
      pedagógica\" no lugar de \"desenvolvimento de capacidades

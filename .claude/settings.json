@@ -14,6 +14,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Adm\\.claude\\projects\\c--Users-Adm-OneDrive-02-Academico-Producao-Cientifica-GitHub-enaju-gcpj\\memory"
     ]
   }
 }
